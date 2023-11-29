@@ -7,11 +7,11 @@ from environment import WarehouseEnvironment
 class Agent:
     def __init__(self, enviroment, model):
         
-        # Initialize atributes
+        # 状态数是环境的格子数
         self._state_size = enviroment.n_states
         self._action_space = enviroment.action_space()
         self._action_size = enviroment.n_actions
-        
+        # 经验回放池
         self.expirience_replay = deque(maxlen=4)
         
         # Initialize discount and exploration rate
@@ -24,16 +24,20 @@ class Agent:
         # self.alighn_target_model()
 
     def store(self, state, action, reward, next_state, terminated):
+        # 放入经验回放池
         self.expirience_replay.append((state, action, reward, next_state, terminated))
     
     def _build_compile_model(self):
+        # 构建初始化网络模型
         model = get_cnn_model(48,48,4,4)
         return model
 
     def alighn_target_model(self):
+        # 更新目标网络
         self.target_network.set_weights(self.q_network.get_weights())
     
     def act(self, state):
+        # 采取动作
         if np.random.rand() <= self.epsilon:
             return random.choice(self._action_space)
         
@@ -41,6 +45,7 @@ class Agent:
         return np.argmax(q_values[0])
 
     def retrain(self, batch_size):
+        # 利用经验池训练
         minibatch = random.sample(self.expirience_replay, batch_size)
         
         for state, action, reward, next_state, terminated in minibatch:
@@ -66,7 +71,9 @@ if __name__ == '__main__':
 
     batch_size = 3
     num_of_episodes = 100
+    # 最大步数
     timesteps_per_episode = 1000
+    # 输出模型的摘要信息
     agent.q_network.summary()
 
     import numpy as np
@@ -80,8 +87,8 @@ if __name__ == '__main__':
         reward = 0
         terminated = False
         
-        bar = progressbar.ProgressBar(maxval=timesteps_per_episode/10, widgets=\
-    [progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+        bar = progressbar.ProgressBar(maxval=timesteps_per_episode/10, widgets=
+                                      [progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
         bar.start()
         
         for timestep in range(timesteps_per_episode):
