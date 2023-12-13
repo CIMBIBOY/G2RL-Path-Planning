@@ -1,18 +1,6 @@
-from PIL import Image
 import numpy as np
 from heapq import heappop, heappush
-import matplotlib.pyplot as plt
 
-def read_image(image_path):
-    # Load the image
-    image = Image.open(image_path)
-    return np.array(image)
-
-def set_start_end(image, start_pos, end_pos):
-    # Set the start and end positions
-    image[start_pos[0], start_pos[1], :] = np.array([255, 0, 0])  # Red
-    image[end_pos[0], end_pos[1], :] = np.array([0, 0, 255])  # Blue
-    return image
 
 def a_star_search(image):
     # Define the start and goal colors
@@ -102,17 +90,3 @@ def a_star_search(image):
             elif np.array_equal(image[i, j], np.array([0, 0, 0])):
                 path_matrix[i, j] = -1
     return path, path_image, path_matrix
-
-# Usage example
-image = read_image('data/cleaned_empty/empty-48-48-random-10_60_agents.png')
-# 起点
-start_pos = (0, 0)
-# 终点
-end_pos = (len(image)-1, len(image[0])-1)
-# 设置起点和终点
-image = set_start_end(image, start_pos, end_pos)
-
-path, modified_image, path_matrix = a_star_search(image)
-print(path_matrix)
-plt.imshow(modified_image, cmap='gray')
-plt.show()
