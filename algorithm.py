@@ -77,7 +77,7 @@ def a_star_search(image):
     path.reverse()
 
     # Modify the original image to mark the path
-    path_image = np.full_like(image[:, :, 0], 255, dtype=np.int32)
+    path_image = np.full_like(image[:, :, 0], 0, dtype=np.int32)
     for pos in path:
         image[pos[0], pos[1]] = np.array([0, 255, 0])  # Green
         path_image[pos[0], pos[1]] = 105

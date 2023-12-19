@@ -2,9 +2,12 @@ import numpy as np
 import random
 from collections import deque
 from network import MLP, CNN
+import torch
+import copy
 
-class MLP_Agent:
-    def __init__(self, enviroment, model):
+class nn_Agent:
+    def __init__(self, enviroment, model, device):
+        self.enviroment = enviroment
         
         # 状态数是环境的格子数
         self._state_size = enviroment.n_states
@@ -20,6 +23,9 @@ class MLP_Agent:
         # Build networks
         self.q_network = model
         self.target_network = model
+        self.device = device
+        self.criterion = torch.nn.MSELoss()
+        self.optim = torch.optim.Adam(self.q_network.parameters(), lr=3e-5)
 
     def store(self, state, action, reward, next_state, terminated):
         # 放入经验回放池
@@ -32,28 +38,37 @@ class MLP_Agent:
 
     def alighn_target_model(self):
         # 更新目标网络
-        self.target_network.set_weights(self.q_network.get_weights())
+        self.target_network.load_state_dict(self.q_network.state_dict(), strict=True)
     
     def act(self, state):
         # 采取动作
         if np.random.rand() <= self.epsilon:
             return random.choice(self._action_space)
         
-        q_values = self.q_network.predict(state)
-        return np.argmax(q_values[0])
+        q_values = self.q_network(state)
+        # import pdb; pdb.set_trace()
+        return torch.argmax(q_values).item()
 
     def retrain(self, batch_size):
         # 利用经验池训练
-        minibatch = random.sample(self.expirience_replay, batch_size)
+        minibatch = random.sample(self.expirience_replay, min(batch_size, len(self.expirience_replay)))
         
         for state, action, reward, next_state, terminated in minibatch:
-            
-            target = self.q_network.predict(state)
-            
+            input = torch.from_numpy(state.T).float().to(self.device)
+            y_pred = self.q_network(input)
+            labels = y_pred.clone()
             if terminated:
-                target[0][action] = reward
+                labels[action] = reward
             else:
-                t = self.target_network.predict(next_state)
-                target[0][action] = reward + self.gamma * np.amax(t)
+                next_input = torch.from_numpy(next_state.T).float().to(self.device)
+                t = self.target_network(next_input)
+                labels[action] = reward + self.gamma * torch.max(t).item()
             
-            self.q_network.fit(state, target, epochs=1, verbose=0)
+            # 梯度下降
+            loss = self.criterion(y_pred, labels)
+            self.optim.zero_grad()
+            loss.backward()
+            self.optim.step()
+        # if self.enviroment.time_idx % 100 == 0:
+        #     print(f"loss: {loss.item()}")
+            # self.q_network.fit(state, target, epochs=1, verbose=0)
