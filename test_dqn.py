@@ -16,9 +16,9 @@ if __name__ == '__main__':
     # GPU设置
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     save_path = "models/model_test.pkl"
-    load_path = "models/1219_1.pkl"
+    load_path = "models/1220_14fov_2.pkl"
     # 环境和智能体初始化
-    env = StaticEnvironment()
+    env = StaticEnvironment(local_fov=14, num_dyna=50)
     env.is_render = True
     state = env.reset()
     model = CNN(env.dim_states, env.n_actions).to(device)
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     # 训练参数设置
     batch_size = 4
     num_of_episodes = 100
-    timesteps_per_episode = 1000
+    timesteps_per_episode = 200
     
     num_finished_episodes = 0
     # 训练
@@ -54,7 +54,7 @@ if __name__ == '__main__':
             if done:
                 break
         # Update the target network with new weights
-        # print(timestep)
+        print(timestep)
         agent.alighn_target_model()
         if timestep < timesteps_per_episode-1:
             num_finished_episodes += 1

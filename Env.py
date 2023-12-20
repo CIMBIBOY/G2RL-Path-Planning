@@ -4,15 +4,14 @@ import numpy as np
 import copy
 import time
 from algorithm import a_star_search
-import utils
+import random
 
 
 class StaticEnvironment:
 
-    def __init__(self, amr_count = 20, agent_idx = 0, local_fov = 10):
+    def __init__(self, agent_idx = 0, local_fov = 10, num_dyna = 0):
         # 初始地图地址
         self.map_path = "data/cleaned_empty/empty-48-48-random-10_60_agents.png"
-        self.amr_count = amr_count
         # 把png图片转为array，三层RGB
         self.map_origin = np.array(Image.open(self.map_path))
         # 状态空间维数
@@ -32,6 +31,9 @@ class StaticEnvironment:
         self.agent_pos = {}
         # 可视化
         self.is_render = False
+        # 动态障碍物数量
+        self.num_dyna = num_dyna
+        self.dyna_obst = {}
 
     def generate_start_and_end_points(self):
         """生成起点和终点    
@@ -42,7 +44,7 @@ class StaticEnvironment:
         end_pos = [len(self.map_global)-1, len(self.map_global[0])-1]
         self.map_global[start_pos[0], start_pos[1], :] = np.array([255, 0, 0])  # Red
         self.map_global[end_pos[0], end_pos[1], :] = np.array([0, 0, 255])  # Blue
-        self.map_agent[start_pos[0], start_pos[1], :] = np.array([255,165,0])  # Orange
+        self.map_agent[start_pos[0], start_pos[1], :] = np.array([255,0,0])  # 红色
         self.agent_pos[self.agent_idx] = start_pos
         self.end_pos = end_pos
         
@@ -56,6 +58,7 @@ class StaticEnvironment:
         self.map_agent = copy.deepcopy(self.map_origin)
         self.generate_start_and_end_points()
         self.generate_path()
+        self.generate_dyna_obst()
         self.guidance_idx = 0
         self.time_idx = 0
         return self.get_state()
@@ -70,8 +73,37 @@ class StaticEnvironment:
             self.map_origin[pos[0], pos[1], 1] == 0 and \
             self.map_origin[pos[0], pos[1], 2] == 0:
             return False
+        # 动态障碍物不能走
+        if self.map_agent[pos[0], pos[1], 0] == 255 and \
+            self.map_agent[pos[0], pos[1], 1] == 165 and \
+            self.map_agent[pos[0], pos[1], 2] == 0:
+            return False
         return True
-        
+    
+    def generate_dyna_obst(self):
+        # 生成动态障碍物
+        n_dynamic_obst = self.num_dyna
+        h, w = self.map_origin.shape[:2]
+        while n_dynamic_obst > 0:
+            h_obs = random.randint(0,h-1)
+            w_obs = random.randint(0,w-1)
+            if self.is_free([h_obs, w_obs]):
+                self.map_agent[h_obs, w_obs, :] = np.array([255,165,0])
+                n_dynamic_obst -= 1
+                self.dyna_obst[self.num_dyna-n_dynamic_obst] = [h_obs, w_obs]
+    
+    def dyna_obst_update(self):
+        for idx in self.dyna_obst:
+            pos = self.dyna_obst[idx]
+            action_num = random.randint(0, self.n_actions-1)
+            action = self.action_dict[action_num]
+            pos_next = [pos[0] + action[1], pos[1] + action[2]]
+            if self.is_free(pos_next):
+                self.dyna_obst[idx] = pos_next
+                self.map_agent[pos[0], pos[1], :] = np.array([255,255,255])
+                self.map_agent[pos_next[0], pos_next[1], :] = np.array([255,165,0])
+            else:
+                pass
 
     def step(self, action_num):
         # 选择动作
@@ -82,7 +114,7 @@ class StaticEnvironment:
         if self.is_free(agent_pos_next):
             self.agent_pos[self.agent_idx] = agent_pos_next
             self.map_agent[agent_pos[0], agent_pos[1], :] = np.array([255,255,255])
-            self.map_agent[agent_pos_next[0], agent_pos_next[1], :] = np.array([255,165,0])
+            self.map_agent[agent_pos_next[0], agent_pos_next[1], :] = np.array([255,0,0])
             is_collided = False
         else:
             is_collided = True
@@ -125,7 +157,7 @@ class StaticEnvironment:
         local_map_end_row = local_fov + (bottom - agent_pos[0])
         local_map_end_col = local_fov + (right - agent_pos[1])
         local_map[local_map_start_row:local_map_end_row+1, local_map_start_col:local_map_end_col+1, 0:3] = \
-            self.map_origin[top:bottom+1, left:right+1,:]
+            self.map_agent[top:bottom+1, left:right+1,:]
         # 将路径信息复制到局部视野中
         map_path_now = copy.deepcopy(self.map_path)
         map_path_now[self.path_matrix <= self.guidance_idx] = 0
