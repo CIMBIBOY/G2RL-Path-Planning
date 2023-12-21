@@ -14,7 +14,8 @@ class nn_Agent:
         self._action_space = enviroment.action_space()
         self._action_size = enviroment.n_actions
         # 经验回放池
-        self.expirience_replay = deque(maxlen=4)
+        self.expirience_replay = deque(maxlen=5)
+        self.reward_replay = deque(maxlen=5)
         
         # Initialize discount and exploration rate
         self.gamma = 0.6
@@ -30,6 +31,8 @@ class nn_Agent:
     def store(self, state, action, reward, next_state, terminated):
         # 放入经验回放池
         self.expirience_replay.append((state, action, reward, next_state, terminated))
+        if reward > 0:
+            self.reward_replay.append((state, action, reward, next_state, terminated))
     
     def _build_compile_model(self):
         # 构建初始化网络模型
@@ -51,7 +54,7 @@ class nn_Agent:
 
     def retrain(self, batch_size):
         # 利用经验池训练
-        minibatch = random.sample(self.expirience_replay, min(batch_size, len(self.expirience_replay)))
+        minibatch = random.sample(self.expirience_replay, len(self.expirience_replay))
         
         for state, action, reward, next_state, terminated in minibatch:
             input = torch.from_numpy(state.T).float().to(self.device)
@@ -69,6 +72,23 @@ class nn_Agent:
             self.optim.zero_grad()
             loss.backward()
             self.optim.step()
-        # if self.enviroment.time_idx % 100 == 0:
-        #     print(f"loss: {loss.item()}")
-            # self.q_network.fit(state, target, epochs=1, verbose=0)
+        # 利用奖励池训练
+        minibatch = random.sample(self.reward_replay, min(batch_size, len(self.reward_replay)))
+
+        for state, action, reward, next_state, terminated in minibatch:
+            input = torch.from_numpy(state.T).float().to(self.device)
+            y_pred = self.q_network(input)
+            labels = y_pred.clone()
+            if terminated:
+                labels[action] = reward
+            else:
+                next_input = torch.from_numpy(next_state.T).float().to(self.device)
+                t = self.target_network(next_input)
+                labels[action] = reward + self.gamma * torch.max(t).item()
+            
+            # 梯度下降
+            loss = self.criterion(y_pred, labels)
+            self.optim.zero_grad()
+            loss.backward()
+            self.optim.step()
+        

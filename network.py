@@ -40,3 +40,24 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return x
 
+class CNN2(nn.Module):
+    def __init__(self, input_shape, num_actions):
+        super(CNN2, self).__init__()
+        self.conv1 = nn.Conv2d(input_shape[2], 32, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
+        self.relu = nn.ReLU(inplace=True)
+        self.flatten = nn.Flatten(start_dim=0, end_dim=-1)
+        self.fc1 = nn.Linear(128 * input_shape[0] * input_shape[1], 256)
+        self.fc2 = nn.Linear(256, 512)
+        self.fc3 = nn.Linear(512, num_actions)
+
+    def forward(self, x):
+        x = torch.relu(self.conv1(x))
+        x = torch.relu(self.conv2(x))
+        x = torch.relu(self.conv3(x))
+        x = self.flatten(x)
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x

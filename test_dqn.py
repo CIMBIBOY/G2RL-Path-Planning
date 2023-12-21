@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import trange
 
-from network import MLP, CNN
+import network
 from Env import StaticEnvironment
 from Agent import nn_Agent
 
@@ -16,21 +16,21 @@ if __name__ == '__main__':
     # GPU设置
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     save_path = "models/model_test.pkl"
-    load_path = "models/1220_14fov_2.pkl"
+    load_path = "models/1221_14fov_3_80reached.pkl"
     # 环境和智能体初始化
     env = StaticEnvironment(local_fov=14, num_dyna=50)
     env.is_render = True
     state = env.reset()
-    model = CNN(env.dim_states, env.n_actions).to(device)
+    model = network.CNN(env.dim_states, env.n_actions).to(device)
     model.load_state_dict(torch.load(load_path))
     agent = nn_Agent(env, model, device)
     # 测试
     input = torch.from_numpy(state.T).float().to(device)
     print(input.size())
     # 训练参数设置
-    batch_size = 4
-    num_of_episodes = 100
-    timesteps_per_episode = 200
+    batch_size = 5
+    num_of_episodes = 1000
+    timesteps_per_episode = 1000
     
     num_finished_episodes = 0
     # 训练
@@ -54,9 +54,9 @@ if __name__ == '__main__':
             if done:
                 break
         # Update the target network with new weights
-        print(timestep)
         agent.alighn_target_model()
-        if timestep < timesteps_per_episode-1:
+        if timestep < timesteps_per_episode - 1:
             num_finished_episodes += 1
+        print(timestep)
     print("num_finished_episodes:", num_finished_episodes, "percentage:", num_finished_episodes/num_of_episodes)
     torch.save(agent.q_network.state_dict(), save_path)

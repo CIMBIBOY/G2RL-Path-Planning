@@ -78,6 +78,11 @@ class StaticEnvironment:
             self.map_agent[pos[0], pos[1], 1] == 165 and \
             self.map_agent[pos[0], pos[1], 2] == 0:
             return False
+        # 对于动态障碍，智能体不能走
+        if self.map_agent[pos[0], pos[1], 0] == 255 and \
+            self.map_agent[pos[0], pos[1], 1] == 0 and \
+            self.map_agent[pos[0], pos[1], 2] == 0:
+            return False
         return True
     
     def generate_dyna_obst(self):
@@ -118,6 +123,8 @@ class StaticEnvironment:
             is_collided = False
         else:
             is_collided = True
+        # 动态障碍物运动
+        self.dyna_obst_update()
         
         reward = self.get_reward(is_collided)
         state = self.get_state()
