@@ -2,10 +2,11 @@ from PIL import Image
 from numpy import asarray
 from glob import glob
 import os
-# load the image and convert into
-# numpy array
-empty_images = glob('data/cleaned_empty/empty*')
-generated_images = glob('data/agents_locals_*')
+
+# load the image and convert into a numpy array
+empty_images = glob('G2RL-Path-Planning/data/cleaned_empty/empty*')
+generated_images = glob('G2RL-Path-Planning/data/agent_locals*')
+
 def clean():
     for img_name in empty_images:
 
@@ -21,7 +22,7 @@ def clean():
                     numpydata[i,j] = [255,255,255]
         
         img = Image.fromarray(numpydata, 'RGB')
-        filename = f'data/cleaned_empty/{img_name.split("/")[-1]}'
+        filename = f'G2RL-Path-Planning/data/cleaned_empty/{img_name.split("/")[-1]}'
         print(filename)
         img.save(filename)
 

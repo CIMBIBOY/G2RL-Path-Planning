@@ -30,7 +30,9 @@ def guide_map(w,h,h_coord,w_coord, map_name = "guide-1", color_coord = [50,205,5
 
 
 def map_to_value(arr):
-    """生成地图的array，将RGB值转换为0和1，0表示可通行，1表示静态障碍物（黑色）
+    """
+    Generate an array of the map and convert the RGB values ​​into 0 and 1. 
+    0 means passable and 1 means static obstacles (black)
     """
     h,w = arr.shape[:2]
     new_arr = np.zeros(shape=(h,w), dtype=np.int8)
@@ -43,18 +45,25 @@ def map_to_value(arr):
     return new_arr
 
 def start_end_points(obs_coords, arr):
-    """生成起点和终点坐标
-    传入的是所有动态障碍物的坐标和01地图value map
-    返回：每个动态障碍物的终点坐标list，list为[动态障碍物id, [起点坐标, 终点坐标]]
+    """
+    Generate start and end coordinates
+
+    Input: coordinates of all dynamic obstacles and the 0, 1 value map
+
+    Output: list of end point coordinates of each dynamic obstacle
+    the list is [dynamic obstacle id, [start point coordinates, end point coordinates]  
+    
     """
     coords = []
-    # 地图大小
+    # Map size
     h,w = arr.shape[:2]
     for i,c in enumerate(obs_coords):
         while True:
             h_new = random.randint(0,h-1)
             w_new = random.randint(0,w-1)
-            # 随机选择终点，终点需可选（非静态障碍），且不能是起点。TODO：感觉这里写错了，应该是不能是其他终点，not in coords
+            # The end point is randomly selected. 
+            # The end point must be optional (not a static obstacle) and cannot be the starting point. 
+            # TODO: Might be an issue here. There shouldn't be another endpoint, not in coords.
             if arr[h_new][w_new] == 0 and [h_new, w_new] not in obs_coords and [h_new, w_new] != c:
                 c.extend([h_new, w_new])
                 coords.append([i, c])
@@ -77,7 +86,8 @@ def local_guidance(paths, arr, idx):
     return arr
 
 def heuristic_generator(arr, end):
-    """生成启发式函数值表
+    """
+    Generate a table of heuristic function values
     """
     try:
         h,w = arr.shape
@@ -86,7 +96,7 @@ def heuristic_generator(arr, end):
     h_map = [[0 for i in range(w)] for j in range(h)]
     for i in range(h):
         for j in range(w):
-            # 启发函数为曼哈顿距离
+            # The heuristic function is Manhattan distance
             h_map[i][j] = abs(end[0] - i) + abs(end[1] - j)
 
     return h_map

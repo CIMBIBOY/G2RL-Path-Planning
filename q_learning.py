@@ -2,7 +2,7 @@ import pickle
 def training():
     import random
     import numpy as np
-    from environment import WarehouseEnvironment
+    from WarehouseEnv import WarehouseEnvironment
 
     env = WarehouseEnvironment()
     q_table = np.zeros([env.n_states, env.n_actions])
@@ -41,7 +41,7 @@ def training():
             state = next_state
             epochs += 1
 
-        env.create_scenes("data/agents_q_learning.gif")
+        env.create_scenes("G2RL-Path-Planning/data/agents_q_learning.gif")
         all_rewards.append(reward)
 
         if i % 100 == 0:
