@@ -11,11 +11,11 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 1, local_fov = 15):
+    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 4, local_fov = 15):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
-        self.map_path = "G2RL-Path-Planning/data/cleaned_empty/empty-48-48-random-10_60_agents.png"
+        self.map_path = "data/dynamic_pos/sample_results_1/dyn_move_70_empty-48-48-random-10_60_agents.png" 
         self.amr_count = amr_count
         # Convert png image to array, three layers of RGB
         self.map_img_arr = np.asarray(Image.open(self.map_path))
@@ -115,10 +115,10 @@ class WarehouseEnvironment:
         os.makedirs(train_dir, exist_ok=True)
 
         # Save the image with a unique filename
-        img_path = os.path.join(train_dir, f"train_{train_index}_{image_index}.png")
+        img_path = os.path.join(train_dir, f"train_{train_index}_{int(image_index)}.png")
         img.save(img_path)
 
-    def create_scenes(self, path = "G2RL-Path-Planning/data/agent_locals.gif", length_s = 100):
+    def create_scenes(self, path = "data/agent_locals.gif", length_s = 100):
         if len(self.scenes) > 0:
             self.scenes[0].save(path,
                  save_all=True, append_images=self.scenes[1:], optimize=False, duration=length_s*4, loop=0)

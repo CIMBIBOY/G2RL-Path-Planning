@@ -8,14 +8,14 @@ if __name__ == '__main__':
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
 
     batch_size = 3
-    num_of_episodes = 100
+    num_of_episodes = 420
     # Maximum number of steps
     timesteps_per_episode = 1000
     # Output model summary information
     print_model_summary(agent.q_network, (batch_size, 1, 30, 30, 4), batch_size)
 
     training_starts = False 
-    train_index = 2
+    train_index = 4
     steps = 1
 
     import numpy as np
@@ -53,7 +53,7 @@ if __name__ == '__main__':
             if len(agent.expirience_replay) > batch_size:
                 agent.retrain(batch_size)
             
-            if timestep%10 == 0:
+            if timestep % 10 == 0:
                 bar.update(timestep/10 + 1)
         
         bar.finish()

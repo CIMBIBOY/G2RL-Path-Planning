@@ -15,7 +15,12 @@ def training():
     rewards_window = []
     all_rewards = []
 
-    for i in range(1, 10001):
+    # For visualization
+    train_index = 3
+    steps = 3
+    index = 1
+
+    for i in range(1, 100001):
         state,_ = env.reset()
 
         epochs, penalties, reward, = 0, 0, 0
@@ -27,7 +32,13 @@ def training():
             else:
                 action = np.argmax(q_table[state]) # Exploit learned values
 
-            _, next_state, reward, done = env.step(action) 
+            _, next_state, reward, done = env.step(action)
+
+            if steps > 8200: steps = 3
+            if steps < 100 or steps > 8000 and steps % 3: 
+                env.render(train_index, index)
+                index = index + 1 
+            steps = steps + 1
             
             old_value = q_table[state, action]
             next_max = np.max(q_table[next_state])
@@ -41,7 +52,7 @@ def training():
             state = next_state
             epochs += 1
 
-        env.create_scenes("G2RL-Path-Planning/data/agents_q_learning.gif")
+        env.create_scenes("data/agents_q_learning.gif")
         all_rewards.append(reward)
 
         if i % 100 == 0:
