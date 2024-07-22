@@ -13,7 +13,7 @@ from map_generator import heuristic_generator
 3.	Update coordinates of obstacles during simulation steps.
 '''
 
-def initialize_objects(arr, n_dynamic_obst = 10):
+def initialize_objects(arr, n_dynamic_obst = 20):
     """
     Input: array of initial map, number of dynamic obstacles
 
@@ -86,6 +86,9 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     if new_dist < dist:
         dist = new_dist
 
+    # Clear the previous agent position
+    inst_arr[h_old, w_old] = [255, 255, 255]
+
     # Update dynamic obstacles
     for idx, path in enumerate(coords):
         if idx == agent:
@@ -112,13 +115,20 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
         coords[idx] = coords[idx][:time_idx] + [[h_new, w_new]] + coords[idx][time_idx+1:]
 
+    # Clear the previous agent position only if it's red
+    if np.array_equal(inst_arr[h_old, w_old], [255, 0, 0]):
+        inst_arr[h_old, w_old] = [255, 255, 255]
+
     # Update agent position after moving obstacles
     if not agentDone:
-        inst_arr[h_old, w_old] = [255, 255, 255]
         inst_arr[h_new, w_new] = [255, 0, 0]
 
     # Update the agent's path in coords
     coords[agent] = coords[agent][:time_idx] + [[h_new, w_new]] + coords[agent][time_idx+1:]
+
+    print(f"Agent position: old = {(h_old, w_old)}, new = {(h_new, w_new)}")
+    moving_obstacles = sum(1 for idx, path in enumerate(coords) if idx != agent and time_idx < len(path))
+    print(f"Number of moving obstacles: {moving_obstacles}")
 
     # Update local observation and global map
     local_obs = inst_arr[max(0,h_new - width):min(h-1,h_new + width), max(0,w_new - width):min(w-1,w_new + width)]

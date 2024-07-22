@@ -11,7 +11,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 4, local_fov = 15):
+    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 1, local_fov = 15):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
@@ -35,80 +35,89 @@ class WarehouseEnvironment:
     def reset(self):
         # Initialize all dynamic obstacles
         self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
+        
+        # Generate destinations and routes
+        print(f"Number of dynamic obstacles after initialization: {len(self.dynamic_coords)}")
+        self.generate_end_points_and_paths()
+        print(f"Number of dynamic obstacles after generating paths: {len(self.dynamic_coords)}")
+        
         # The dynamic obstacle corresponding to agent_idx is regarded as the controlled agent
-        self.agent_prev_coord = self.dynamic_coords[self.agent_idx][:2]
+        self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]  # Take the first position of the path
+        
         # The agent is modified to red
         self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]  # Mark the agent's initial position in red
         
-        # Generate destinations and routes
-        self.generate_end_points_and_paths()
         self.time_idx = 1
         self.scenes = []
         self.cells_skipped = 0
+        
         # initialization state
         reset_state = self.dynamic_coords[self.agent_idx]
-        # initial distance
-        self.dist = manhattan_distance(reset_state[0], reset_state[1], reset_state[2], reset_state[3])
         
-        graphical_state, _, _,_ = self.step(4)
-        return reset_state[0] * reset_state[1], graphical_state
-
+        # initial distance
+        start = reset_state[0]
+        end = reset_state[-1]
+        self.dist = manhattan_distance(start[0], start[1], end[0], end[1])
+        
+        graphical_state, _, _, _ = self.step(4)
+        return start[0] * start[1], graphical_state
     
     def generate_end_points_and_paths(self):
         """
         Generate destinations and routes
         """
-        # Convert the map array to 0 and 1, 0 means passable, 1 means static obstacles
         value_map = map_to_value(self.init_arr.squeeze())
-
-        # Generate the end point coordinates, the list is 
-        # [dynamic obstacle id, [start point coordinates, end point coordinates]]
         start_end_coords = start_end_points(self.dynamic_coords, value_map)
-        # Update dynamic_coords with start and end points
-        self.dynamic_coords = [coord for _, coord in start_end_coords]
 
         self.agents_paths = []
-        # Generate a route for each dynamic obstacle
         for idx, idx_coords in start_end_coords:
-
-            # print(f"idx_coords: {idx_coords}") # Debug
-
-            # Correctly slice and format start and end points
             start = idx_coords[:2]
             end = idx_coords[2:]
             
-            # Ensure they are properly formatted
             if isinstance(start, (list, tuple)) and len(start) == 2 and isinstance(end, (list, tuple)) and len(end) == 2:
                 path, fov = find_path(value_map, start, end)
+                if path:  # Check if a valid path was found
+                    short_path = return_path(path)
+                    self.agents_paths.append(short_path)
+                else:
+                    print(f"No valid path found for obstacle {idx}. Keeping it stationary.")
+                    self.agents_paths.append([start])  # Keep the obstacle at its start position
             else:
                 raise ValueError("start and end must be lists or tuples of length 2")
-            
-            # Generate route (only static obstacles are considered)
-            short_path = return_path(path)
-            self.agents_paths.append(short_path)
-        # Global navigation map, without navigation is 255 (white), with navigation is 105 (gray)
+        
+        # Debug
+        valid_paths = sum(1 for path in self.agents_paths if len(path) > 1)
+        print(f"Number of valid paths: {valid_paths}")
+        
+        self.dynamic_coords = self.agents_paths
         self.global_mapper_arr = global_guidance(self.agents_paths[self.agent_idx], self.map_img_arr.squeeze())
-    
-    
+
+
     def step(self, action):
         if len(self.init_arr) == 0:
             print("Run env.reset() first")
             return
 
         self.time_idx += 1
-        conv,x,y = self.action_dict[action]
+        conv, x, y = self.action_dict[action]
         # print(f'Action taken: {conv}')
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
 
+        print(f"Number of dynamic obstacles before update: {len(self.dynamic_coords)}")
         # Update coordinates - last (if working) is: , self.dynamic_coords
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, self.agent_prev_coord, self.dist, self.dynamic_coords = \
+        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords = \
         update_coords(
-            self.agents_paths, self.init_arr, self.agent_idx, self.time_idx,
-            self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
+            self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
+            self.local_fov, self.global_mapper_arr, [x,y], self.dynamic_coords[self.agent_idx][self.time_idx-1],
             self.cells_skipped, self.dist
         )
+
+        self.agent_prev_coord = new_agent_coord
+
+        print(f"Number of dynamic obstacles after update: {len(self.dynamic_coords)}")
+        print(f"Agent color at position {self.agent_prev_coord}: {self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]]}")
 
         combined_arr = np.array([])
         if len(local_obs) > 0:

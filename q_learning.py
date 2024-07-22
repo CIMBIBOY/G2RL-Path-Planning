@@ -16,7 +16,7 @@ def training():
     all_rewards = []
 
     # For visualization
-    train_index = 3
+    train_index = 4
     steps = 3
     index = 1
 
