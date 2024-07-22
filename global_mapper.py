@@ -1,5 +1,10 @@
 from map_generator import heuristic_generator
 
+'''
+1.	Pathfinding algorithm implementations.
+2.	Support functions for the A* algorithm, such as the heuristic generator and others for path reconstruction.
+'''
+
 class Node:
     def __init__(self, parent, position) -> None:
         self.parent = parent
@@ -29,6 +34,19 @@ def a_star(grid, init, goal, cost, delta, heuristic):
     :return: extended: 2D matrix of same size as grid, for each element, the count when it was expanded or -1 if
              the element was never expanded.
     """
+
+    # Debug print statements to check init and goal
+    print(f"init: {init}")
+    print(f"goal: {goal}")
+
+    # Ensure that init and goal are in the form [x, y]
+    if not (isinstance(init, (list, tuple)) and len(init) == 2):
+        print(f"Error: init is not a list or tuple of length 2: {init}, type: {type(init)}")
+        raise ValueError("init must be a list or tuple of length 2")
+    if not (isinstance(goal, (list, tuple)) and len(goal) == 2):
+        print(f"Error: goal is not a list or tuple of length 2: {goal}, type: {type(goal)}")
+        raise ValueError("goal must be a list or tuple of length 2")
+    
     # open list
     path = []
     routes = []
@@ -40,20 +58,20 @@ def a_star(grid, init, goal, cost, delta, heuristic):
     expand = [[-1 for _ in range(len(grid[0]))] for _ in range(len(grid))]
     expand[init[0]][init[1]] = 0
     # starting point
-    init = Node(None, init)
+    init_node = Node(None, init)
     g = 0
 
     # f = g + h, h is the heuristic function, indicating the estimated cost (Manhattan distance)
         # from the current node to the end point
-    f = g + heuristic[init.pos[0]][init.pos[1]]
+    f = g + heuristic[init_node.pos[0]][init_node.pos[1]]
 
-    minList = [f, g, init]
+    minList = [f, g, init_node]
 
     while [minList[2].pos[0], minList[2].pos[1]] != goal:
         # Traverse all possible directions of movement
         for i in range(len(delta)):
             # moved node
-            point = Node(init, [init.pos[0] + delta[i][0], init.pos[1] + delta[i][1]])
+            point = Node(init_node, [init_node.pos[0] + delta[i][0], init_node.pos[1] + delta[i][1]])
             # Judgment has not crossed the line
             if 0 <= point.pos[0] < len(grid) and 0 <= point.pos[1] < len(grid[0]):
                 # Judgment has not been visited
@@ -77,10 +95,10 @@ def a_star(grid, init, goal, cost, delta, heuristic):
         # Remove the node from path
         path.remove(minList)
         # update init, g
-        init = minList[2]
+        init_node = minList[2]
         g = minList[1]
         # Recording order
-        expand[init.pos[0]][init.pos[1]] = val
+        expand[init_node.pos[0]][init_node.pos[1]] = val
         val += 1
 
     # print(routes)
@@ -106,24 +124,32 @@ def return_path(path):
 
 def find_path(maze, start, end):
     """
-    Generate paths through a* algorithm
+    Generate paths through A* algorithm
     Input: value map, starting point coordinates, end point coordinates
     Output: Global Guidance
-
     """
+    # Ensure start and end are lists or tuples of length 2
+    if not (isinstance(start, (list, tuple)) and len(start) == 2):
+        raise ValueError("start must be a list or tuple of length 2")
+    if not (isinstance(end, (list, tuple)) and len(end) == 2):
+        raise ValueError("end must be a list or tuple of length 2")
+    
     h_map = heuristic_generator(maze, end)
     # cost is the cost of moving once
     cost = 1
     # Optional movement direction
     delta = [[0, -1],  # go up
              [-1, 0],  # go left
-             [0, 1],  # go down
-             [1, 0]]  # go right
+             [0, 1],   # go down
+             [1, 0]]   # go right
     
     '''
     A* algorithm 
     - input: 
     value map, starting point coordinates, end point coordinates, cost, optional movement direction, heuristic function
     '''
+    print(f"start: {start}")
+    print(f"end: {end}")
+    
     path, expand = a_star(maze, start, end, cost, delta, h_map)
     return path, expand

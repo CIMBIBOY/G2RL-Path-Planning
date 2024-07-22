@@ -15,12 +15,12 @@ class WarehouseEnvironment:
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
-        self.map_path = "data/dynamic_pos/sample_results_1/dyn_move_70_empty-48-48-random-10_60_agents.png" 
+        self.map_path = "data/cleaned_empty/empty-48-48-random-10_60_agents.png" 
         self.amr_count = amr_count
         # Convert png image to array, three layers of RGB
         self.map_img_arr = np.asarray(Image.open(self.map_path))
         # state space dimension
-        self.n_states = height*width
+        self.n_states = height * width
         # action space dim
         self.n_actions = len(self.action_space())
         # Agent id
@@ -29,23 +29,27 @@ class WarehouseEnvironment:
         self.local_fov = local_fov
         self.time_idx = 1
         self.init_arr = []
+        # Array for dynamic objects
+        self.dynamic_coords = []
     
     def reset(self):
         # Initialize all dynamic obstacles
-        self.coord, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
+        self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
         # The dynamic obstacle corresponding to agent_idx is regarded as the controlled agent
-        self.agent_prev_coord = self.coord[self.agent_idx]
+        self.agent_prev_coord = self.dynamic_coords[self.agent_idx][:2]
         # The agent is modified to red
-        self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255,0,0]
+        self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]  # Mark the agent's initial position in red
+        
         # Generate destinations and routes
         self.generate_end_points_and_paths()
         self.time_idx = 1
         self.scenes = []
         self.cells_skipped = 0
         # initialization state
-        reset_state = self.coord[self.agent_idx]
+        reset_state = self.dynamic_coords[self.agent_idx]
         # initial distance
         self.dist = manhattan_distance(reset_state[0], reset_state[1], reset_state[2], reset_state[3])
+        
         graphical_state, _, _,_ = self.step(4)
         return reset_state[0] * reset_state[1], graphical_state
 
@@ -53,25 +57,39 @@ class WarehouseEnvironment:
     def generate_end_points_and_paths(self):
         """
         Generate destinations and routes
-
         """
         # Convert the map array to 0 and 1, 0 means passable, 1 means static obstacles
-        value_map = map_to_value(self.init_arr)
+        value_map = map_to_value(self.init_arr.squeeze())
 
         # Generate the end point coordinates, the list is 
         # [dynamic obstacle id, [start point coordinates, end point coordinates]]
-        start_end_coords = start_end_points(self.coord, value_map)
+        start_end_coords = start_end_points(self.dynamic_coords, value_map)
+        # Update dynamic_coords with start and end points
+        self.dynamic_coords = [coord for _, coord in start_end_coords]
 
-        self.agents_paths = dict()
+        self.agents_paths = []
         # Generate a route for each dynamic obstacle
         for idx, idx_coords in start_end_coords:
-            # Generate route (only static obstacles are considered)
-            path, fov= find_path(value_map, idx_coords[:2], idx_coords[2:])
-            short_path = return_path(path)
-            self.agents_paths[idx] = short_path
-        # Global navigation map, without navigation is 255 (white), with navigation is 105 (gray)
-        self.global_mapper_arr = global_guidance(self.agents_paths[self.agent_idx], self.map_img_arr)
 
+            print(f"idx_coords: {idx_coords}") # Debug
+
+            # Correctly slice and format start and end points
+            start = idx_coords[:2]
+            end = idx_coords[2:]
+            
+            # Ensure they are properly formatted
+            if isinstance(start, (list, tuple)) and len(start) == 2 and isinstance(end, (list, tuple)) and len(end) == 2:
+                path, fov = find_path(value_map, start, end)
+            else:
+                raise ValueError("start and end must be lists or tuples of length 2")
+            
+            # Generate route (only static obstacles are considered)
+            short_path = return_path(path)
+            self.agents_paths.append(short_path)
+        # Global navigation map, without navigation is 255 (white), with navigation is 105 (gray)
+        self.global_mapper_arr = global_guidance(self.agents_paths[self.agent_idx], self.map_img_arr.squeeze())
+    
+    
     def step(self, action):
         if len(self.init_arr) == 0:
             print("Run env.reset() first")
@@ -83,9 +101,9 @@ class WarehouseEnvironment:
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
 
-        # Update coordinates
+        # Update coordinates - last (if working) is: , self.dynamic_coords
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-            self.cells_skipped, self.init_arr, self.agent_prev_coord, self.dist = \
+        self.cells_skipped, self.init_arr, self.agent_prev_coord, self.dist = \
         update_coords(
             self.agents_paths, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
@@ -137,27 +155,9 @@ class WarehouseEnvironment:
         return list(self.action_dict.keys())
 
 
-# import random
-# actions = [0,1,2,3,4]
+
 
 env = WarehouseEnvironment()
 _, state = env.reset()
 
 print(state.shape)
-# env.render()
-# print(coord)
-
-# for ep in range(2):
-#     env.reset()
-#     print(f'Episode: {ep}')
-#     for i in range(100):
-#         act = random.choice(actions)
-#         new_state,rewards,isDone = env.step(act)
-#         print(rewards)
-#         if isDone:
-#             print("Reached Gole")
-#             break
-
-#     env.create_scenes(path = f"data/agent_local_{ep}.gif")
-
-

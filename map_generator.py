@@ -2,6 +2,18 @@ from PIL import Image
 import numpy as np
 import random
 
+'''
+This script is responsible for generating maps and converting map data. 
+It includes functions to:
+
+	1.	Create random maps with obstacles placed randomly.
+	2.	Generate guide maps with specific coordinates marked.
+	3.	Convert maps to value maps where obstacles are represented by 1 and free spaces by 0.
+	4.	Generate start and end points for dynamic obstacles.
+	5.	Create global and local guidance maps based on the paths of dynamic obstacles.
+	6.	Generate heuristic values for the A* algorithm based on Manhattan distances.
+'''
+
 def random_map(w,h, n_static, map_name = "random-1", color_coord = [50,205,50]):
 
     static_coord_width = [random.randint(0,w-1) for i in range(n_static)]
@@ -89,14 +101,25 @@ def heuristic_generator(arr, end):
     """
     Generate a table of heuristic function values
     """
-    try:
-        h,w = arr.shape
-    except:
-        h,w = len(arr), len(arr[0])
-    h_map = [[0 for i in range(w)] for j in range(h)]
+    print(f"Input arr shape: {arr.shape}")
+    
+    if len(arr.shape) == 2:
+        h, w = arr.shape
+    elif len(arr.shape) == 3:
+        h, w, _ = arr.shape
+    else:
+        raise ValueError("Invalid input array shape")
+    
+    # Check if end coordinates are within bounds
+    if not (0 <= end[0] < h and 0 <= end[1] < w):
+        raise ValueError(f"End coordinates {end} are out of bounds for the map size ({h}, {w})")
+
+    # Initialize heuristic map with zeroes
+    h_map = [[0 for _ in range(w)] for _ in range(h)]
+    
+    # Compute Manhattan distances
     for i in range(h):
         for j in range(w):
-            # The heuristic function is Manhattan distance
             h_map[i][j] = abs(end[0] - i) + abs(end[1] - j)
 
     return h_map

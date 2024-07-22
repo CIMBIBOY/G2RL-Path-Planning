@@ -4,6 +4,14 @@ from PIL import Image
 from numpy import array, asarray
 import numpy as np
 import random
+from global_mapper import a_star
+from map_generator import heuristic_generator
+
+'''
+1.	Initialize dynamic objects on the map.
+2.	Move dynamic obstacles based on the A* algorithm or other logic.
+3.	Update coordinates of obstacles during simulation steps.
+'''
 
 def initialize_objects(arr, n_dynamic_obst = 10):
     """
@@ -34,8 +42,58 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     # Returns the Manhattan distance
     return abs(x_end - x_st) + abs(y_end - y_st)
 
+
+def move_dynamic_obstacles(coords, inst_arr):
+    h, w = inst_arr.shape[:2]
+    new_coords = []
+    for coord in coords:
+        # Debug print statement to check the coordinates
+        print(f"move_dynamic_obstacles coord: {coord}")
+
+        if not (isinstance(coord, (list, tuple)) and len(coord) == 2):
+            print(f"Error: coord is not a list or tuple of length 2: {coord}, type: {type(coord)}")
+            raise ValueError("coord must be a list or tuple of length 2")
+
+        current_pos = coord[:2]
+        goal_pos = coord[2:] if len(coord) > 2 else None
+
+        if goal_pos:
+            if isinstance(goal_pos, (list, tuple)):
+                next_pos = current_pos
+                for goal in goal_pos:
+                    path = a_star(inst_arr.squeeze(), current_pos, goal, 1, [[0, 1], [1, 0], [0, -1], [-1, 0]], heuristic_generator(inst_arr.squeeze(), goal))
+                    if path and len(path) > 1:
+                        next_pos = path[1][2].pos
+                        break
+                    else:
+                        next_pos = current_pos
+            else:
+                path = a_star(inst_arr.squeeze(), current_pos, [goal_pos], 1, [[0, 1], [1, 0], [0, -1], [-1, 0]], heuristic_generator(inst_arr.squeeze(), [goal_pos]))
+                if path and len(path) > 1:
+                    next_pos = path[1][2].pos
+                else:
+                    next_pos = current_pos
+
+            h_new, w_new = next_pos
+            if 0 <= h_new < h and 0 <= w_new < w:
+                if np.array_equal(inst_arr[h_new, w_new], [255, 255, 255]):  # Check if the cell is white (free)
+                    inst_arr[h_new, w_new] = [255, 165, 0]  # Move to new position
+                    inst_arr[current_pos[0], current_pos[1]] = [255, 255, 255]  # Clear old position
+                    new_coords.append([h_new, w_new] + goal_pos)
+                else:
+                    if random.random() < 0.9:
+                        new_coords.append(coord)  # Stay in place
+                    else:
+                        new_coords.append(current_pos + current_pos)  # Reverse direction and move back to start cell
+            else:
+                new_coords.append(coord)
+        else:
+            new_coords.append(coord)
+            
+    return new_coords, inst_arr
+
 def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist):
-    
+   
     """ 
     Update coordinates
 
@@ -54,14 +112,14 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     agent_reward = 0
 
     # Get the path of the agent
-    coord = coords[agent]
+    agent_path = coords[agent]
 
     agentDone = False
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
     h_new, w_new = h_old + direction[0], w_old + direction[1]
 
     # Upon reaching the end
-    if (h_new == coord[-1][0] and w_new == coord[-1][1]):
+    if (h_new == agent_path[-1][0] and w_new == agent_path[-1][1]):
         print("Agent Reached Goal")
         agentDone = True
 
@@ -94,45 +152,30 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
             cells_skipped = 0
 
     # Cross-border return 
-    # TODO: Problem here. 
+    # TODO: Problem herxe. 
     # If you encounter an obstacle, you cannot move.
 
     if 0 > h_new or h_new>=h or 0>w_new or w_new>= w:
         h_new, w_new = h_old, w_old
 
     # Calculate new distance
-    if manhattan_distance(h_new, w_new, coord[-1][0], coord[-1][1]) < dist:
+    if manhattan_distance(h_new, w_new, agent_path[-1][0], agent_path[-1][1]) < dist:
         # agent_reward += rewards_dict('3')
-        dist = manhattan_distance(h_new, w_new, coord[-1][0], coord[-1][1])
+        dist = manhattan_distance(h_new, w_new, agent_path[-1][0], agent_path[-1][1])
     
     # Update diagram
-    inst_arr[h_old, w_old] = [255,255,255]
-    inst_arr[h_new, w_new] = [255,0,0]
+    inst_arr[h_old, w_old] = [255, 255, 255]
+    inst_arr[h_new, w_new] = [255,   0,   0]
+
+    # Update dynamic obstacles
+    # new_coords, inst_arr = move_dynamic_obstacles(coords, inst_arr)
 
     # if idx == agent:
     local_obs = inst_arr[max(0,h_new - width):min(h-1,h_new + width), max(0,w_new - width):min(w-1,w_new + width)]
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0,h_new - width):min(h-1,h_new + width), max(0,w_new - width):min(w-1,w_new + width)]
 
-    # TODO Dynamic obstacles are not updated
-    
-        # else:
-        #     isEnd = False
-        #     if time_idx < len(coord):
-        #         h_old, w_old = coord[time_idx-1]
-        #         h_new, w_new = coord[time_idx]
-            
-        #     else:
-        #         h_old, w_old = coord[-1]
-        #         h_new, w_new = coord[-1]
-        #         isEnd = True
-
-        #     if not isEnd:
-        #         inst_arr[h_new, w_new] = [255,165,0]
-        #         inst_arr[h_old, w_old] = [255,255,255]
-    
-    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist
-
+    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist #, new_coords
 
 def rewards_dict(case, N = 0):
 
@@ -145,22 +188,10 @@ def rewards_dict(case, N = 0):
     """
     r1,r2,r3,r4 = -0.01, -0.1, 0.1, 0.05
     rewards = {
-        '0':r1,
-        '1':r1 + r2,
-        '2': r1 + N*r3,
+        '0': r1,
+        '1': r1 + r2,
+        '2': r1 + N * r3,
         '3': r4
     }
 
     return rewards[case]
-
-    
-    
-    
-
-    
-
-        
-
-
-
-
