@@ -38,74 +38,14 @@ def initialize_objects(arr, n_dynamic_obst = 10):
     
     return coord, arr
 
+
 def manhattan_distance(x_st, y_st, x_end, y_end):
     # Returns the Manhattan distance
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 
-def move_dynamic_obstacles(coords, inst_arr):
-    h, w = inst_arr.shape[:2]
-    new_coords = []
-    for coord in coords:
-        # Debug print statement to check the coordinates
-        print(f"move_dynamic_obstacles coord: {coord}")
-
-        if not (isinstance(coord, (list, tuple)) and len(coord) == 2):
-            print(f"Error: coord is not a list or tuple of length 2: {coord}, type: {type(coord)}")
-            raise ValueError("coord must be a list or tuple of length 2")
-
-        current_pos = coord[:2]
-        goal_pos = coord[2:] if len(coord) > 2 else None
-
-        if goal_pos:
-            if isinstance(goal_pos, (list, tuple)):
-                next_pos = current_pos
-                for goal in goal_pos:
-                    path = a_star(inst_arr.squeeze(), current_pos, goal, 1, [[0, 1], [1, 0], [0, -1], [-1, 0]], heuristic_generator(inst_arr.squeeze(), goal))
-                    if path and len(path) > 1:
-                        next_pos = path[1][2].pos
-                        break
-                    else:
-                        next_pos = current_pos
-            else:
-                path = a_star(inst_arr.squeeze(), current_pos, [goal_pos], 1, [[0, 1], [1, 0], [0, -1], [-1, 0]], heuristic_generator(inst_arr.squeeze(), [goal_pos]))
-                if path and len(path) > 1:
-                    next_pos = path[1][2].pos
-                else:
-                    next_pos = current_pos
-
-            h_new, w_new = next_pos
-            if 0 <= h_new < h and 0 <= w_new < w:
-                if np.array_equal(inst_arr[h_new, w_new], [255, 255, 255]):  # Check if the cell is white (free)
-                    inst_arr[h_new, w_new] = [255, 165, 0]  # Move to new position
-                    inst_arr[current_pos[0], current_pos[1]] = [255, 255, 255]  # Clear old position
-                    new_coords.append([h_new, w_new] + goal_pos)
-                else:
-                    if random.random() < 0.9:
-                        new_coords.append(coord)  # Stay in place
-                    else:
-                        new_coords.append(current_pos + current_pos)  # Reverse direction and move back to start cell
-            else:
-                new_coords.append(coord)
-        else:
-            new_coords.append(coord)
-            
-    return new_coords, inst_arr
-
 def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist):
-   
-    """ 
-    Update coordinates
-
-    Input: all paths, a map containing all information, agent id, time, local field of view size, global navigation map, 
-        movement direction [x, y], coordinates at the last moment, number of grids skipped, distance
-
-    Output: local field of view, local navigation map, global navigation map, whether to act, reward, 
-        number of skipped grids, updated map, updated coordinates, distance
-
-    """
-
-    h,w = inst_arr.shape[:2]
+    h, w = inst_arr.shape[:2]
     
     local_obs = np.array([])
     local_map = np.array([])
@@ -116,66 +56,77 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
     agentDone = False
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
-    h_new, w_new = h_old + direction[0], w_old + direction[1]
+    h_new, w_new = h_old + direction[1], w_old + direction[0]
 
     # Upon reaching the end
     if (h_new == agent_path[-1][0] and w_new == agent_path[-1][1]):
         print("Agent Reached Goal")
         agentDone = True
 
-    # out of bounds
-    if (h_new >= h or w_new >= w) or (h_new < 0 or w_new < 0):
+    # Check for out of bounds or obstacles
+    if (h_new >= h or w_new >= w) or (h_new < 0 or w_new < 0) or \
+       (inst_arr[h_new,w_new][0] == 255 and inst_arr[h_new,w_new][1] == 165 and inst_arr[h_new,w_new][2] == 0) or \
+       (inst_arr[h_new,w_new][0] == 0 and inst_arr[h_new,w_new][1] == 0 and inst_arr[h_new,w_new][2] == 0):
         agent_reward += rewards_dict('1')
         agentDone = True
-
+        h_new, w_new = h_old, w_old
     else:
-        # If you hit an obstacle (orange or black)
-        if (inst_arr[h_new,w_new][0] == 255 and inst_arr[h_new,w_new][1] == 165 and inst_arr[h_new,w_new][2] == 0) or \
-            (inst_arr[h_new,w_new][0] == 0 and inst_arr[h_new,w_new][1] == 0 and inst_arr[h_new,w_new][2] == 0):
-
-            agent_reward += rewards_dict('1')
-            agentDone = True
-
         # If the global navigation point (white) is not encountered
-        if (global_map[h_new, w_new] == 255) and (0<=h_new<h and 0<=w_new<w):
+        if (global_map[h_new, w_new] == 255):
             agent_reward += rewards_dict('0')
-
-            # TODO 
-            # The statistics here are wrong. 
-            # They are not counted by the number of empty walks but by the skipped global navigation points.
-
             cells_skipped += 1
         
         # If you hit the global navigation point (gray)
-        if (global_map[h_new, w_new] != 255 and cells_skipped >= 0) and (0<=h_new<h and 0<=w_new<w):
-            agent_reward += rewards_dict('2',cells_skipped)
+        if (global_map[h_new, w_new] != 255 and cells_skipped >= 0):
+            agent_reward += rewards_dict('2', cells_skipped)
             cells_skipped = 0
 
-    # Cross-border return 
-    # TODO: Problem herxe. 
-    # If you encounter an obstacle, you cannot move.
-
-    if 0 > h_new or h_new>=h or 0>w_new or w_new>= w:
-        h_new, w_new = h_old, w_old
-
     # Calculate new distance
-    if manhattan_distance(h_new, w_new, agent_path[-1][0], agent_path[-1][1]) < dist:
-        # agent_reward += rewards_dict('3')
-        dist = manhattan_distance(h_new, w_new, agent_path[-1][0], agent_path[-1][1])
-    
-    # Update diagram
-    inst_arr[h_old, w_old] = [255, 255, 255]
-    inst_arr[h_new, w_new] = [255,   0,   0]
+    new_dist = manhattan_distance(h_new, w_new, agent_path[-1][0], agent_path[-1][1])
+    if new_dist < dist:
+        dist = new_dist
 
     # Update dynamic obstacles
-    # new_coords, inst_arr = move_dynamic_obstacles(coords, inst_arr)
+    for idx, path in enumerate(coords):
+        if idx == agent:
+            continue  # Skip the agent, we'll update it separately
+        
+        if time_idx < len(path):
+            h_old, w_old = path[time_idx - 1]
+            h_new, w_new = path[time_idx]
+        else:
+            h_old, w_old = path[-1]
+            h_new, w_new = path[-1]
 
-    # if idx == agent:
+        if h_new >= h or w_new >= w:
+            continue
+
+        cell_coord = inst_arr[h_new, w_new]
+
+        if np.array_equal(cell_coord, [255, 255, 255]):  # If the cell is white (free)
+            inst_arr[h_new, w_new] = [255, 165, 0]  # Move to new position
+            inst_arr[h_old, w_old] = [255, 255, 255]  # Clear old position
+        else:
+            # If the next cell is occupied, stay in place
+            h_new, w_new = h_old, w_old
+
+        coords[idx] = coords[idx][:time_idx] + [[h_new, w_new]] + coords[idx][time_idx+1:]
+
+    # Update agent position after moving obstacles
+    if not agentDone:
+        inst_arr[h_old, w_old] = [255, 255, 255]
+        inst_arr[h_new, w_new] = [255, 0, 0]
+
+    # Update the agent's path in coords
+    coords[agent] = coords[agent][:time_idx] + [[h_new, w_new]] + coords[agent][time_idx+1:]
+
+    # Update local observation and global map
     local_obs = inst_arr[max(0,h_new - width):min(h-1,h_new + width), max(0,w_new - width):min(w-1,w_new + width)]
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0,h_new - width):min(h-1,h_new + width), max(0,w_new - width):min(w-1,w_new + width)]
 
-    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist #, new_coords
+    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, coords
+
 
 def rewards_dict(case, N = 0):
 

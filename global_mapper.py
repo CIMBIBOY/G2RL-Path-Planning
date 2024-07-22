@@ -36,8 +36,8 @@ def a_star(grid, init, goal, cost, delta, heuristic):
     """
 
     # Debug print statements to check init and goal
-    print(f"init: {init}")
-    print(f"goal: {goal}")
+    # print(f"init: {init}")
+    # print(f"goal: {goal}")
 
     # Ensure that init and goal are in the form [x, y]
     if not (isinstance(init, (list, tuple)) and len(init) == 2):
@@ -148,8 +148,8 @@ def find_path(maze, start, end):
     - input: 
     value map, starting point coordinates, end point coordinates, cost, optional movement direction, heuristic function
     '''
-    print(f"start: {start}")
-    print(f"end: {end}")
+    # print(f"start: {start}")
+    # print(f"end: {end}")
     
     path, expand = a_star(maze, start, end, cost, delta, h_map)
     return path, expand

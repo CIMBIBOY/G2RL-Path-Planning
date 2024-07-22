@@ -71,7 +71,7 @@ class WarehouseEnvironment:
         # Generate a route for each dynamic obstacle
         for idx, idx_coords in start_end_coords:
 
-            print(f"idx_coords: {idx_coords}") # Debug
+            # print(f"idx_coords: {idx_coords}") # Debug
 
             # Correctly slice and format start and end points
             start = idx_coords[:2]
@@ -103,7 +103,7 @@ class WarehouseEnvironment:
 
         # Update coordinates - last (if working) is: , self.dynamic_coords
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, self.agent_prev_coord, self.dist = \
+        self.cells_skipped, self.init_arr, self.agent_prev_coord, self.dist, self.dynamic_coords = \
         update_coords(
             self.agents_paths, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
@@ -153,8 +153,6 @@ class WarehouseEnvironment:
             4:['idle',0,0]
         }
         return list(self.action_dict.keys())
-
-
 
 
 env = WarehouseEnvironment()

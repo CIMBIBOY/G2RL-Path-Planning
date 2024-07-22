@@ -101,7 +101,7 @@ def heuristic_generator(arr, end):
     """
     Generate a table of heuristic function values
     """
-    print(f"Input arr shape: {arr.shape}")
+    # print(f"Input arr shape: {arr.shape}")
     
     if len(arr.shape) == 2:
         h, w = arr.shape
