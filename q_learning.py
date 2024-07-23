@@ -1,4 +1,8 @@
 import pickle
+import pdb 
+
+# pdb.set_trace() # terminal python debug
+
 def training():
     import random
     import numpy as np

@@ -38,16 +38,22 @@ class WarehouseEnvironment:
         # Initialize all dynamic obstacles
         self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
         
+        print(f"dynamics before step: {self.dynamic_coords}")
+        # env.render_forvideo(0,1) # env image debugger
+        
         # Generate destinations and routes
         # print(f"Number of dynamic obstacles after initialization: {len(self.dynamic_coords)}")
         self.generate_end_points_and_paths()
-        # print(f"Number of dynamic obstacles after generating paths: {len(self.dynamic_coords)}")
+            # print(f"Number of dynamic obstacles after generating paths: {len(self.dynamic_coords)}")
         
         # The dynamic obstacle corresponding to agent_idx is regarded as the controlled agent
         self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]  # Take the first position of the path
-        
+        print(self.agent_prev_coord)
+
         # The agent is modified to red
         self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]  # Mark the agent's initial position in red
+        
+        # env.render_forvideo(0,2) # env image debugger
         
         self.time_idx = 1
         self.scenes = []
@@ -56,12 +62,19 @@ class WarehouseEnvironment:
         # initialization state
         reset_state = self.dynamic_coords[self.agent_idx]
         
+        # env.render_forvideo(0,3) # env image debugger
+        
         # initial distance
         start = reset_state[0]
         end = reset_state[-1]
         self.dist = manhattan_distance(start[0], start[1], end[0], end[1])
         
+        # env.render_forvideo(0,4) # env image debugger
+        
         graphical_state, _, _, _ = self.step(4)
+
+        print(f"dynamics after step: {self.dynamic_coords}")
+
         return start[0] * start[1], graphical_state
     
     def generate_end_points_and_paths(self):
@@ -105,19 +118,22 @@ class WarehouseEnvironment:
         # print(f'Action taken: {conv}')
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
-
+        
+        # env.render_forvideo(0,5) # env image debugger
         # print(f"Number of dynamic obstacles before update: {len(self.dynamic_coords)}")
+        
         # Update coordinates - last (if working) is: , self.dynamic_coords
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
         self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.dynamic_coords[self.agent_idx][self.time_idx-1],
-            self.cells_skipped, self.dist
+            self.cells_skipped, self.dist, env
         )
 
         self.agent_prev_coord = new_agent_coord
 
+        # env.render_forvideo(0,7) # env image debugger
         # print(f"Number of dynamic obstacles after update: {len(self.dynamic_coords)}")
         # print(f"Agent color at position {self.agent_prev_coord}: {self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]]}")
 
@@ -128,7 +144,9 @@ class WarehouseEnvironment:
             combined_arr = np.dstack((local_obs, local_map))
             combined_arr = symmetric_pad_array(combined_arr, target_array, 255)
             combined_arr = combined_arr.reshape(1,1,combined_arr.shape[0], combined_arr.shape[1], combined_arr.shape[2])
-
+            
+            # env.render_forvideo(0,8) # env image debugger
+            
         return combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone
     
     def render_forvideo(self, train_index, image_index):
@@ -200,4 +218,4 @@ _, state = env.reset() # image of first reset
 
 print(state.shape)
 
-env.render_forvideo(0,1)
+env.render_forvideo(0,16)
