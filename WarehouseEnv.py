@@ -5,6 +5,7 @@ from map_generator import start_end_points, map_to_value, global_guidance
 from global_mapper import find_path, return_path
 from utils import symmetric_pad_array
 import os
+import imageio
 
 def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
@@ -31,6 +32,7 @@ class WarehouseEnvironment:
         self.init_arr = []
         # Array for dynamic objects
         self.dynamic_coords = []
+        self.frames = []  # To store frames for .gif visualization
     
     def reset(self):
         # Initialize all dynamic obstacles
@@ -129,7 +131,7 @@ class WarehouseEnvironment:
 
         return combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone
     
-    def render(self, train_index, image_index):
+    def render_forvideo(self, train_index, image_index):
         assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
         img = Image.fromarray(self.init_arr, 'RGB')
 
@@ -144,6 +146,35 @@ class WarehouseEnvironment:
         # Save the image with a unique filename
         img_path = os.path.join(train_dir, f"train_{train_index}_{int(image_index)}.png")
         img.save(img_path)
+
+    def render(self):
+        """
+        Renders the current state of the environment in gif format for real-time visualization. 
+        This method should be called after each step.
+        """
+        assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
+        
+        # Convert the environment state to an image
+        img = Image.fromarray(self.init_arr.astype('uint8'), 'RGB')
+        
+        # Resize the image if needed (optional, for better visualization)
+        img = img.resize((200, 200), Image.NEAREST)
+        
+        # Convert PIL Image to numpy array
+        frame = np.array(img)
+        
+        # Append the frame to our list of frames
+        self.frames.append(frame)
+        
+        # Update the GIF file
+        self._update_gif()
+
+    def _update_gif(self):
+        """
+        Updates the GIF file with all frames collected so far.
+        """
+        # Save the frames as a GIF
+        imageio.mimsave("data/g2rl.gif", self.frames, duration=0.5, loop=0)
 
     def create_scenes(self, path = "data/agent_locals.gif", length_s = 100):
         if len(self.scenes) > 0:
@@ -168,3 +199,5 @@ env = WarehouseEnvironment()
 _, state = env.reset()
 
 print(state.shape)
+
+env.render_forvideo(0,1)

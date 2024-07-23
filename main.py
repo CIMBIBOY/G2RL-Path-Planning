@@ -15,7 +15,7 @@ if __name__ == '__main__':
     print_model_summary(agent.q_network, (batch_size, 1, 30, 30, 4), batch_size)
 
     training_starts = False 
-    train_index = 4
+    train_index = 5
     steps = 1
 
     import numpy as np
@@ -43,7 +43,8 @@ if __name__ == '__main__':
             
             state = next_state
 
-            env.render(train_index, steps)
+            env.render()
+            env.render_forvideo(train_index, steps)
             steps = steps + 1
             
             if terminated:

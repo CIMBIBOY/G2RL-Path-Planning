@@ -16,7 +16,7 @@ def training():
     all_rewards = []
 
     # For visualization
-    train_index = 4
+    train_index = 5
     steps = 3
     index = 1
 
@@ -33,10 +33,11 @@ def training():
                 action = np.argmax(q_table[state]) # Exploit learned values
 
             _, next_state, reward, done = env.step(action)
+            env.render()
 
             if steps > 8200: steps = 3
             if steps < 100 or steps > 8000 and steps % 3: 
-                env.render(train_index, index)
+                env.render_forvideo(train_index, index)
                 index = index + 1 
             steps = steps + 1
             
