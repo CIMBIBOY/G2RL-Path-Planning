@@ -6,13 +6,14 @@ from global_mapper import find_path, return_path
 from utils import symmetric_pad_array
 import os
 import imageio
+import pygame
 
 def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 6, agent_idx = 1, local_fov = 15):
+    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 1, local_fov = 15):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
@@ -32,28 +33,28 @@ class WarehouseEnvironment:
         self.init_arr = []
         # Array for dynamic objects
         self.dynamic_coords = []
+        self.episode_count = 0
+
         self.frames = []  # To store frames for .gif visualization
+
+        # Real-time visualization with pygame
+        pygame.init()
+        self.screen = pygame.display.set_mode((200, 200))
+        self.clock = pygame.time.Clock()
     
     def reset(self):
         # Initialize all dynamic obstacles
         self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
         
-        print(f"dynamics before step: {self.dynamic_coords}")
-        # env.render_forvideo(0,1) # env image debugger
-        
         # Generate destinations and routes
-        # print(f"Number of dynamic obstacles after initialization: {len(self.dynamic_coords)}")
         self.generate_end_points_and_paths()
-            # print(f"Number of dynamic obstacles after generating paths: {len(self.dynamic_coords)}")
-        
+       
         # The dynamic obstacle corresponding to agent_idx is regarded as the controlled agent
         self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]  # Take the first position of the path
-        print(self.agent_prev_coord)
+        # print(self.agent_prev_coord)
 
         # The agent is modified to red
         self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]  # Mark the agent's initial position in red
-        
-        # env.render_forvideo(0,2) # env image debugger
         
         self.time_idx = 1
         self.scenes = []
@@ -62,18 +63,24 @@ class WarehouseEnvironment:
         # initialization state
         reset_state = self.dynamic_coords[self.agent_idx]
         
-        # env.render_forvideo(0,3) # env image debugger
-        
         # initial distance
         start = reset_state[0]
         end = reset_state[-1]
         self.dist = manhattan_distance(start[0], start[1], end[0], end[1])
         
-        # env.render_forvideo(0,4) # env image debugger
-        
+        self.agent_path = self.agents_paths[self.agent_idx]
         graphical_state, _, _, _ = self.step(4)
 
-        print(f"dynamics after step: {self.dynamic_coords}")
+        # Increment the episode count
+        self.episode_count += 1
+        
+        # Re-randomize the start and goal cells of all dynamic obstacles after 50 episodes
+        if self.episode_count % 50 == 0:
+            self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
+            self.generate_end_points_and_paths()
+            self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]
+            self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]
+            self.agent_path = self.agents_paths[self.agent_idx]
 
         return start[0] * start[1], graphical_state
     
@@ -101,8 +108,8 @@ class WarehouseEnvironment:
                 raise ValueError("start and end must be lists or tuples of length 2")
         
         # Debug
-        valid_paths = sum(1 for path in self.agents_paths if len(path) > 1)
-        print(f"Number of valid paths: {valid_paths}")
+        # valid_paths = sum(1 for path in self.agents_paths if len(path) > 1)
+        # print(f"Number of valid paths: {valid_paths}")
         
         self.dynamic_coords = self.agents_paths
         self.global_mapper_arr = global_guidance(self.agents_paths[self.agent_idx], self.map_img_arr.squeeze())
@@ -119,23 +126,16 @@ class WarehouseEnvironment:
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
         
-        # env.render_forvideo(0,5) # env image debugger
-        # print(f"Number of dynamic obstacles before update: {len(self.dynamic_coords)}")
-        
-        # Update coordinates - last (if working) is: , self.dynamic_coords
+        # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
         self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
-            self.local_fov, self.global_mapper_arr, [x,y], self.dynamic_coords[self.agent_idx][self.time_idx-1],
-            self.cells_skipped, self.dist, env
+            self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
+            self.cells_skipped, self.dist
         )
 
         self.agent_prev_coord = new_agent_coord
-
-        # env.render_forvideo(0,7) # env image debugger
-        # print(f"Number of dynamic obstacles after update: {len(self.dynamic_coords)}")
-        # print(f"Agent color at position {self.agent_prev_coord}: {self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]]}")
 
         combined_arr = np.array([])
         if len(local_obs) > 0:
@@ -144,12 +144,10 @@ class WarehouseEnvironment:
             combined_arr = np.dstack((local_obs, local_map))
             combined_arr = symmetric_pad_array(combined_arr, target_array, 255)
             combined_arr = combined_arr.reshape(1,1,combined_arr.shape[0], combined_arr.shape[1], combined_arr.shape[2])
-            
-            # env.render_forvideo(0,8) # env image debugger
-            
+        
         return combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone
     
-    def render_forvideo(self, train_index, image_index):
+    def render_video(self, train_index, image_index):
         assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
         img = Image.fromarray(self.init_arr, 'RGB')
 
@@ -165,7 +163,7 @@ class WarehouseEnvironment:
         img_path = os.path.join(train_dir, f"train_{train_index}_{int(image_index)}.png")
         img.save(img_path)
 
-    def render(self):
+    def render_gif(self):
         """
         Renders the current state of the environment in gif format for real-time visualization. 
         This method should be called after each step.
@@ -194,6 +192,42 @@ class WarehouseEnvironment:
         # Save the frames as a GIF
         imageio.mimsave("data/g2rl.gif", self.frames, duration=0.5, loop=0)
 
+    def render(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
+
+        # Create a surface from the numpy array
+        surf = pygame.surfarray.make_surface(self.init_arr)
+        
+        # Define the window size
+        new_width, new_height = 800, 800  # Changable
+        
+        # Scale the surface to the size
+        surf = pygame.transform.scale(surf, (new_width, new_height))
+        
+        # If the screen size doesn't match the new size, recreate it
+        if self.screen.get_size() != (new_width, new_height):
+            self.screen = pygame.display.set_mode((new_width, new_height))
+        
+        # Blit the scaled surface to the screen
+        self.screen.blit(surf, (0, 0))
+
+        # Draw the agent's path on the screen
+        for x, y in self.agent_path:
+            pygame.draw.rect(self.screen, (128, 128, 128), (x * new_width // 48, y * new_height // 48, new_width // 48, new_height // 48))
+
+        
+        # Update the display
+        pygame.display.flip()
+        
+        # Control the frame rate
+        self.clock.tick(60)  # 30 FPS
+
+    def close(self):
+        pygame.quit()
+
     def create_scenes(self, path = "data/agent_locals.gif", length_s = 100):
         if len(self.scenes) > 0:
             self.scenes[0].save(path,
@@ -212,10 +246,13 @@ class WarehouseEnvironment:
         }
         return list(self.action_dict.keys())
 
+# Testing Environment
 
+'''
 env = WarehouseEnvironment()
 _, state = env.reset() # image of first reset
 
 print(state.shape)
 
-env.render_forvideo(0,16)
+env.render_video(0,420)
+'''

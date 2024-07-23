@@ -1,11 +1,5 @@
-from collections import defaultdict
-import os
-from PIL import Image
-from numpy import array, asarray
 import numpy as np
 import random
-from global_mapper import a_star
-from map_generator import heuristic_generator
 
 '''
 1.	Initialize dynamic objects on the map.
@@ -23,18 +17,18 @@ def initialize_objects(arr, n_dynamic_obst = 20):
     """
     arr = arr.copy()
     coord = []
-    h, w = arr.shape[:2]
+    h,w = arr.shape[:2]
 
     while n_dynamic_obst > 0:
-        h_obs = random.randint(0, h - 1)
-        w_obs = random.randint(0, w - 1)
+        h_obs = random.randint(0,h-1)
+        w_obs = random.randint(0,w-1)
 
         cell_coord = arr[h_obs, w_obs]
-        if np.array_equal(cell_coord, [255, 255, 255]):
-            arr[h_obs, w_obs] = [255, 165, 0]
+        if cell_coord[0] != 0 and cell_coord[1] != 0 and cell_coord[2] != 0:
+            arr[h_obs, w_obs] = [255,165,0]
             n_dynamic_obst -= 1
-            coord.append([h_obs, w_obs])
-
+            coord.append([h_obs,w_obs])
+    
     return coord, arr
 
 # Function to calculate the Manhattan distance
@@ -42,7 +36,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, env):
+def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist):
     
     """ 
     Update coordinates
@@ -54,8 +48,6 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         number of skipped grids, updated map, updated coordinates, distance
 
     """
-    deb = 0
-
     h, w = inst_arr.shape[:2]
 
     local_obs = np.array([])
@@ -67,15 +59,13 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
     agentDone = False
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
-    print(f"Old cordinates {h_old, w_old}")
     h_new, w_new = h_old + direction[1], w_old + direction[0]
-    print(f"Old cordinates {h_new, h_old}")
 
     # Check if the agent has reached its goal
     if (h_new == agent_path[-1][0] and w_new == agent_path[-1][1]):
         print("Agent Reached Goal")
         agentDone = True
-        inst_arr[h_old, w_old] = [0, 255, 0] # mark "before collision cell" as green
+        inst_arr[h_old, w_old] = [0, 255, 0] # mark "before goal cell" as green
 
     # Check for out of bounds or collisions with obstacles
     if (h_new >= h or w_new >= w) or (h_new < 0 or w_new < 0) or \
@@ -96,11 +86,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     # Calculate new distance
     new_dist = manhattan_distance(h_new, w_new, agent_path[-1][0], agent_path[-1][1])
     if new_dist < dist:
-        print(f"Old dist: {dist}, new dist: {new_dist}")
         dist = new_dist
-
-    env.render_forvideo(0,deb) # env image debugger
-    deb = deb + 1
 
     # Update dynamic obstacles
     for idx, path in enumerate(coords):
@@ -108,8 +94,13 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
             continue  # Skip the agent, we'll update it separately
 
         if time_idx < len(path):
-            h_old_obs, w_old_obs = path[time_idx - 1]
-            h_new_obs, w_new_obs = path[time_idx]
+            if time_idx == 2:
+                # For the first step, we don't move the obstacle
+                h_old_obs, w_old_obs = path[0]
+                h_new_obs, w_new_obs = path[0]
+            else:
+                h_old_obs, w_old_obs = path[time_idx - 1]
+                h_new_obs, w_new_obs = path[time_idx]
         else:
             continue  # Skip obstacles that have reached their goal
 
@@ -127,47 +118,25 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
                 h_new_obs, w_new_obs = coords[idx][1]  # Move to the next position in the reversed path
         
         # Update the obstacle's position
-        print(f"Dyn Obs: {idx} was at pos: {h_old_obs, w_old_obs} and now at {h_new_obs, w_new_obs}" )
-        env.render_forvideo(0,deb) # env image debugger
-        deb = deb + 1
-        # if np.array_equal(inst_arr[h_old_obs, w_old_obs], [255, 165, 0]):  # only move if it's a yellow dynamic object
-        inst_arr[h_new_obs, w_new_obs] = [255, 165, 0]  # Move to new position
+        # print(f"Dyn Obs: {idx} was at pos: {h_old_obs, w_old_obs} and now at {h_new_obs, w_new_obs}" )
         inst_arr[h_old_obs, w_old_obs] = [255, 255, 255]  # Clear old position
+        inst_arr[h_new_obs, w_new_obs] = [255, 165, 0]  # Move to new position
         coords[idx] = path[:time_idx] + [[h_new_obs, w_new_obs]] + path[time_idx+1:]
-        env.render_forvideo(0,deb) # env image debugger
-        deb = deb + 1
-
+    
     # Update agent position after moving obstacles
     if not agentDone:
-        # Clear the previous agent position only if it's red
+        # Clear the previous agent position
         inst_arr[h_old, w_old] = [255, 255, 255]
         inst_arr[h_new, w_new] = [255, 0, 0]
 
-    env.render_forvideo(0,deb) # env image debugger
-    deb = deb + 1
     # Update the agent's path in coords
     coords[agent] = coords[agent][:time_idx] + [[h_new, w_new]] + coords[agent][time_idx+1:]
-    env.render_forvideo(0,deb) # env image debugger
-    deb = deb + 1
-
-    print(f"Agent position: old = {(h_old, w_old)}, new = {(h_new, w_new)}")
-    moving_obstacles = sum(1 for idx, path in enumerate(coords) if idx != agent and time_idx < len(path))
-    print(f"Number of moving obstacles: {moving_obstacles}")
 
     # Update local observation and global map
     local_obs = inst_arr[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
 
-    # Check for collision with dynamic obstacles
-    for idx, path in enumerate(coords):
-        if idx == agent:
-            continue
-        if [h_new, w_new] in path:
-            print("Collision with dynamic obstacle")
-            agent_reward += rewards_dict('1')
-            inst_arr[h_old, w_old] = [0, 255, 0] # mark collision cell as green
-    
     return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, coords
 
 

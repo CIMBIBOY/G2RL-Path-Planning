@@ -58,8 +58,9 @@ class Agent:
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.RMSprop(self.q_network.parameters(), lr=3e-5)
         
+        total_loss = 0.0
+        
         for state, action, reward, next_state, terminated in minibatch:
-            
             state_tensor = torch.from_numpy(state)
             next_state_tensor = torch.from_numpy(next_state)
             target = self.q_network(state_tensor)
@@ -77,3 +78,7 @@ class Agent:
             loss = criterion(self.q_network(state_tensor), target_val)
             loss.backward()
             optimizer.step()
+            
+            total_loss += loss.item()
+        
+        return total_loss / batch_size
