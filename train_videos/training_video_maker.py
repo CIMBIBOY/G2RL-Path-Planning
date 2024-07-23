@@ -12,7 +12,7 @@ def create_video_from_images(image_folder, train_number, video_name='train_x_vid
     if not images:
         print(f"No images found for train number {train_number}.")
         return
-        
+
     # Get the dimensions of the images
     first_image_path = os.path.join(image_folder, images[0])
     frame = cv2.imread(first_image_path)
@@ -39,6 +39,6 @@ def create_video_from_images(image_folder, train_number, video_name='train_x_vid
     cv2.destroyAllWindows()
 
 # Generate video
-training_index = 5
+training_index = 4
 
 create_video_from_images(f'/Users/czimbermark/Documents/SZTAKI/G2RL/G2RL-Path-Planning/training_images/train_{training_index}_images', training_index, f'train_{training_index}_video.avi', fps=7, codec='MJPG', scale=10)

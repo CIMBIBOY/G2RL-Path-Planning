@@ -12,7 +12,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 1, local_fov = 15):
+    def __init__(self,height = 48, width = 48, amr_count = 6, agent_idx = 1, local_fov = 15):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
@@ -39,9 +39,9 @@ class WarehouseEnvironment:
         self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
         
         # Generate destinations and routes
-        print(f"Number of dynamic obstacles after initialization: {len(self.dynamic_coords)}")
+        # print(f"Number of dynamic obstacles after initialization: {len(self.dynamic_coords)}")
         self.generate_end_points_and_paths()
-        print(f"Number of dynamic obstacles after generating paths: {len(self.dynamic_coords)}")
+        # print(f"Number of dynamic obstacles after generating paths: {len(self.dynamic_coords)}")
         
         # The dynamic obstacle corresponding to agent_idx is regarded as the controlled agent
         self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]  # Take the first position of the path
@@ -106,7 +106,7 @@ class WarehouseEnvironment:
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
 
-        print(f"Number of dynamic obstacles before update: {len(self.dynamic_coords)}")
+        # print(f"Number of dynamic obstacles before update: {len(self.dynamic_coords)}")
         # Update coordinates - last (if working) is: , self.dynamic_coords
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
         self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords = \
@@ -118,8 +118,8 @@ class WarehouseEnvironment:
 
         self.agent_prev_coord = new_agent_coord
 
-        print(f"Number of dynamic obstacles after update: {len(self.dynamic_coords)}")
-        print(f"Agent color at position {self.agent_prev_coord}: {self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]]}")
+        # print(f"Number of dynamic obstacles after update: {len(self.dynamic_coords)}")
+        # print(f"Agent color at position {self.agent_prev_coord}: {self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]]}")
 
         combined_arr = np.array([])
         if len(local_obs) > 0:
@@ -196,7 +196,7 @@ class WarehouseEnvironment:
 
 
 env = WarehouseEnvironment()
-_, state = env.reset()
+_, state = env.reset() # image of first reset
 
 print(state.shape)
 
