@@ -44,6 +44,7 @@ def dqn_training(env, num_episodes=420, timesteps_per_episode=1000):
             env.render()
             env.render_video(5, image)
             image += 1
+            env.render_gif()
             
             if terminated:
                 agent.alighn_target_model()
@@ -95,10 +96,11 @@ def q_learning_training(env, num_episodes=100000):
             action = random.choice(env.action_space()) if random.uniform(0, 1) < epsilon else np.argmax(q_table[state])
             _, next_state, reward, done = env.step(action)
 
-            # pygame visulaization and image+video rendering
+            # pygame visulaization, image+video rendering and gif
             env.render()
             env.render_video(5,image)
             image = image + 1
+            # env.render_gif()
             
             old_value = q_table[state, action]
             next_max = np.max(q_table[next_state])

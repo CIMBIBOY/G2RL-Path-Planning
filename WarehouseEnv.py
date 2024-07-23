@@ -200,30 +200,31 @@ class WarehouseEnvironment:
 
         # Create a surface from the numpy array
         surf = pygame.surfarray.make_surface(self.init_arr)
-        
+
         # Define the window size
         new_width, new_height = 800, 800  # Changable
-        
+
         # Scale the surface to the size
         surf = pygame.transform.scale(surf, (new_width, new_height))
-        
+
         # If the screen size doesn't match the new size, recreate it
         if self.screen.get_size() != (new_width, new_height):
             self.screen = pygame.display.set_mode((new_width, new_height))
+
+       # Draw the path under the agent
+        for x, y in self.agent_path:
+            center_x = (x + 0.5) * new_width // self.init_arr.shape[1]
+            center_y = (y + 0.5) * new_height // self.init_arr.shape[0]
+            pygame.draw.circle(surf, (255, 0, 0), (center_x, center_y), 5)
+            # Blit the scaled surface to the screen
         
-        # Blit the scaled surface to the screen
         self.screen.blit(surf, (0, 0))
 
-        # Draw the agent's path on the screen
-        for x, y in self.agent_path:
-            pygame.draw.rect(self.screen, (128, 128, 128), (x * new_width // 48, y * new_height // 48, new_width // 48, new_height // 48))
-
-        
         # Update the display
         pygame.display.flip()
-        
+
         # Control the frame rate
-        self.clock.tick(60)  # 30 FPS
+        self.clock.tick(20)  # 30 FPS
 
     def close(self):
         pygame.quit()
