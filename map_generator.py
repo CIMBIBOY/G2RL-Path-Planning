@@ -61,48 +61,50 @@ def map_to_value(arr):
                 new_arr[i,j] = 1
                 obstacle_count += 1
     
+    if np.all(new_arr == 0):
+        print("Warning: All-zero value map")
     # Eval Debug static + dynamic object count along with cell num
     # print(f"Identified {obstacle_count} obstacles out of {h*w} cells")
     
     return new_arr
 
+
 def start_end_points(obs_coords, arr):
     """
-    Generate start and end coordinates
+    Generate start and end coordinates for dynamic obstacles.
 
-    Input: coordinates of all dynamic obstacles and the 0, 1 value map
+    Input: 
+    - obs_coords: coordinates of all dynamic obstacles
+    - arr: the 0, 1 value map
 
-    Output: list of end point coordinates of each dynamic obstacle
-    the list is [dynamic obstacle id, [start point coordinates, end point coordinates]  
-    
+    Output: list of [dynamic obstacle id, [start point coordinates, end point coordinates]]
     """
     coords = []
-    # Map size
     h, w = arr.shape[:2]
-    for i, c in enumerate(obs_coords):
+    end_points = set()  # To keep track of all end points
+
+    for i, start in enumerate(obs_coords):
         attempts = 0
-        while True:
+        while attempts < 1000:
             h_new = random.randint(0, h-1)
             w_new = random.randint(0, w-1)
-            # The end point is randomly selected. 
-            # The end point must be optional (not a static obstacle) and cannot be the starting point. 
-            # TODO: Might be an issue here. There shouldn't be another endpoint, not in coords.
-            if arr[h_new][w_new] == 0 and [h_new, w_new] not in obs_coords and [h_new, w_new] != c:
-                c.extend([h_new, w_new])
-                coords.append([i, c])
-
-                # Eval of Obstacle position and c_flags
-                # print(f"Obstacle {i}: Start {c[:2]}, End {c[2:]}")
-
+            new_point = [h_new, w_new]
+            
+            if (arr[h_new][w_new] == 0 and 
+                new_point not in obs_coords and 
+                new_point != start and  # This check ensures start != end
+                tuple(new_point) not in end_points):
+                
+                coords.append([i, start + new_point])
+                end_points.add(tuple(new_point))
                 break
+            
             attempts += 1
-            if attempts > 1000:
-                print(f"Warning: Could not find valid end point for obstacle {i} after 1000 attempts")
-                break
-    
-    # Eval of generated c_flags numbers
-    # print(f"Generated {len(coords)} start-end pairs")
-    
+        
+        if attempts == 1000:
+            print(f"Warning: Could not find valid end point for obstacle {i} after 1000 attempts")
+            return None  # Return None if we can't find a valid configuration
+
     return coords
 
 def global_guidance(paths, arr):

@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode, eval_folder='G2RL-Path-Planning/eval_img'):
+def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode, eval_folder='G2RL-Path-Planning/eval_images'):
     """
     Saves an evaluation image showing the environment, start and end positions, agent's path, and optimal path.
 
@@ -75,12 +75,15 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
 
         start_cell = env.dynamic_coords[env.agent_idx][0]
         end_cell = env.dynamic_coords[env.agent_idx][-1]
-        print(f"Episode {episode + 1}/{num_episodes}")
-        print(f"Start cell: {start_cell}, End cell: {end_cell}")
 
-        value_map = map_to_value(env.init_arr.squeeze())
-        optimal_path, _ = find_path(value_map, start_cell, end_cell)
+        assert start_cell != end_cell, "Start and end cells are the same"
+        print(f"Episode {episode + 1}/{num_episodes}")
         
+        value_map = map_to_value(env.init_arr.squeeze())
+
+        print(f"Pathfinding input - Start: {start_cell}, End: {end_cell}")
+        optimal_path, _ = find_path(value_map, start_cell, end_cell)
+      
         if optimal_path == 'fail':
             print("Optimal pathfinding failed before episode start.")
             optimal_path_coords = []
@@ -89,6 +92,16 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
             optimal_path_coords = return_path(optimal_path)
             optimal_path_length = len(optimal_path_coords)
             print(f"Optimal path length: {optimal_path_length}")
+
+            # Debug zero path length bug
+            if optimal_path_length == 0: 
+                print(f"Optimal path: {optimal_path}")
+                print(f"Optimal path coords: {optimal_path_coords}")
+                print(f"Value_map: {value_map}")
+                print(f"Start cell: {start_cell}, end cell: {end_cell}")
+                print(f"Initial array: {env.init_arr}")
+                print(f"Optimal path length: {optimal_path_length}")
+            
 
         done = False
         steps = 0

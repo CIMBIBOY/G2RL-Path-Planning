@@ -106,6 +106,7 @@ class WarehouseEnvironment:
         for idx, idx_coords in start_end_coords:
             start = idx_coords[:2]
             end = idx_coords[2:]
+            assert start != end, "Kb lehetetlen, de mégis megtörténik..."
             
             if isinstance(start, (list, tuple)) and len(start) == 2 and isinstance(end, (list, tuple)) and len(end) == 2:
                 path, fov = find_path(value_map, start, end)

@@ -14,7 +14,7 @@ from eval import evaluate_performance
 # or
 # python main.py --method qnet
 
-def dqn_training(env, num_episodes=2003, timesteps_per_episode=1000):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
     batch_size = 3
     image = 0
@@ -73,7 +73,7 @@ def dqn_training(env, num_episodes=2003, timesteps_per_episode=1000):
 
     # Eval of Deep Q-network
     print(" ---------- Evaluating Performance ----------")
-    performance_metrics = evaluate_performance(env, agent, num_episodes=100)
+    performance_metrics = evaluate_performance(env, agent, num_episodes=154)
     print(performance_metrics)
 
     # Save the training metrics
