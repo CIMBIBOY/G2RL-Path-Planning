@@ -36,7 +36,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist):
+def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal):
     
     """ 
     Update coordinates
@@ -53,6 +53,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     local_obs = np.array([])
     local_map = np.array([])
     agent_reward = 0
+    arrived = 0
 
     # Get the path of the agent
     agent_path = coords[agent]
@@ -61,11 +62,17 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
     h_new, w_new = h_old + direction[1], w_old + direction[0]
 
+    # print(f"Agent's goal cell: {agent_goal}")
+    # Marking agent's goal cell as green 
+    inst_arr[agent_goal[0], agent_goal[1]] = [0, 255, 0]
+
     # Check if the agent has reached its goal
-    if (h_new == agent_path[-1][0] and w_new == agent_path[-1][1]):
-        print("Agent Reached Goal")
+    if (h_new, w_new) == (agent_goal[0], agent_goal[1]):
+        print(f"Agent Reached Goal: {agent_goal}")
         agentDone = True
-        inst_arr[h_old, w_old] = [0, 255, 0] # mark "before goal cell" as green
+        inst_arr[h_new, w_new] = [0, 255, 0]  # mark goal cell as green
+        print(f"Goal reached at: {h_new, w_new} goal pos at {agent_goal[0], agent_goal[1]}")
+        arrived = True
 
     # Check for out of bounds or collisions with obstacles
     if (h_new >= h or w_new >= w) or (h_new < 0 or w_new < 0) or \
@@ -137,7 +144,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
 
-    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, coords
+    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, coords, arrived
 
 
 def rewards_dict(case, N = 0):

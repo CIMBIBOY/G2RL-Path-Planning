@@ -1,6 +1,7 @@
 from PIL import Image
 import numpy as np
 import random
+import matplotlib as plt 
 
 '''
 This script is responsible for generating maps and converting map data. 
@@ -46,14 +47,23 @@ def map_to_value(arr):
     Generate an array of the map and convert the RGB values ​​into 0 and 1. 
     0 means passable and 1 means static obstacles (black)
     """
-    h,w = arr.shape[:2]
+
+    # Eval debug map_to_value conversion call
+    # print("Converting map to value array")
+    
+    h, w = arr.shape[:2]
     new_arr = np.zeros(shape=(h,w), dtype=np.int8)
+    obstacle_count = 0
     for i in range(h):
         for j in range(w):
             cell_coord = arr[i,j]
             if cell_coord[0] == 0 and cell_coord[1] == 0 and cell_coord[2] == 0:
                 new_arr[i,j] = 1
-
+                obstacle_count += 1
+    
+    # Eval Debug static + dynamic object count along with cell num
+    # print(f"Identified {obstacle_count} obstacles out of {h*w} cells")
+    
     return new_arr
 
 def start_end_points(obs_coords, arr):
@@ -68,19 +78,31 @@ def start_end_points(obs_coords, arr):
     """
     coords = []
     # Map size
-    h,w = arr.shape[:2]
-    for i,c in enumerate(obs_coords):
+    h, w = arr.shape[:2]
+    for i, c in enumerate(obs_coords):
+        attempts = 0
         while True:
-            h_new = random.randint(0,h-1)
-            w_new = random.randint(0,w-1)
+            h_new = random.randint(0, h-1)
+            w_new = random.randint(0, w-1)
             # The end point is randomly selected. 
             # The end point must be optional (not a static obstacle) and cannot be the starting point. 
             # TODO: Might be an issue here. There shouldn't be another endpoint, not in coords.
             if arr[h_new][w_new] == 0 and [h_new, w_new] not in obs_coords and [h_new, w_new] != c:
                 c.extend([h_new, w_new])
                 coords.append([i, c])
+
+                # Eval of Obstacle position and c_flags
+                # print(f"Obstacle {i}: Start {c[:2]}, End {c[2:]}")
+
                 break
-        # print(f"Generated for {i} obstacle.")
+            attempts += 1
+            if attempts > 1000:
+                print(f"Warning: Could not find valid end point for obstacle {i} after 1000 attempts")
+                break
+    
+    # Eval of generated c_flags numbers
+    # print(f"Generated {len(coords)} start-end pairs")
+    
     return coords
 
 def global_guidance(paths, arr):
@@ -123,3 +145,4 @@ def heuristic_generator(arr, end):
             h_map[i][j] = abs(end[0] - i) + abs(end[1] - j)
 
     return h_map
+

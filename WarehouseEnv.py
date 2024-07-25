@@ -13,7 +13,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 1, local_fov = 15):
+    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 1, local_fov = 15, pygame_render = True):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
@@ -21,6 +21,8 @@ class WarehouseEnvironment:
         self.amr_count = amr_count
         # Convert png image to array, three layers of RGB
         self.map_img_arr = np.asarray(Image.open(self.map_path))
+        # map size
+        self.width = width
         # state space dimension
         self.n_states = height * width
         # action space dim
@@ -35,17 +37,26 @@ class WarehouseEnvironment:
         self.dynamic_coords = []
         self.episode_count = 0
 
+        # Agent reached end position count 
+        self.arrived = 0
+
         self.frames = []  # To store frames for .gif visualization
 
-        # Real-time visualization with pygame
-        pygame.init()
-        self.screen = pygame.display.set_mode((200, 200))
-        self.clock = pygame.time.Clock()
+        self.pygame_render = pygame_render
+        if pygame_render == True: 
+            # Real-time visualization with pygame
+            pygame.init()
+            self.screen = pygame.display.set_mode((200, 200))
+            self.clock = pygame.time.Clock()
+
     
     def reset(self):
         # Initialize all dynamic obstacles
         self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
         
+        if self.init_arr is None or self.init_arr.size == 0:
+            raise ValueError("Initialization failed, init_arr is empty or None")
+
         # Generate destinations and routes
         self.generate_end_points_and_paths()
        
@@ -118,24 +129,28 @@ class WarehouseEnvironment:
     def step(self, action):
         if len(self.init_arr) == 0:
             print("Run env.reset() first")
-            return
+            return None, None, None, False
 
         self.time_idx += 1
         conv, x, y = self.action_dict[action]
         # print(f'Action taken: {conv}')
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
+
+        agent_goal = self.agent_path[-1]  # Get the goal from the agent's path
         
         # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords = \
+        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords, reached_goal = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist
+            self.cells_skipped, self.dist, agent_goal
         )
 
         self.agent_prev_coord = new_agent_coord
+        if reached_goal == True:
+            self.arrived = self.arrived + 1
 
         combined_arr = np.array([])
         if len(local_obs) > 0:
@@ -145,8 +160,11 @@ class WarehouseEnvironment:
             combined_arr = symmetric_pad_array(combined_arr, target_array, 255)
             combined_arr = combined_arr.reshape(1,1,combined_arr.shape[0], combined_arr.shape[1], combined_arr.shape[2])
         
-        return combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone
+        return_values = (combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone)
+        # print(f"Returning from step: {return_values}")
+        return return_values
     
+
     def render_video(self, train_index, image_index):
         assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
         img = Image.fromarray(self.init_arr, 'RGB')
@@ -211,13 +229,13 @@ class WarehouseEnvironment:
         if self.screen.get_size() != (new_width, new_height):
             self.screen = pygame.display.set_mode((new_width, new_height))
 
-       # Draw the path under the agent
+        # Draw the path under the agent
         for x, y in self.agent_path:
             center_x = (x + 0.5) * new_width // self.init_arr.shape[1]
             center_y = (y + 0.5) * new_height // self.init_arr.shape[0]
             pygame.draw.circle(surf, (255, 0, 0), (center_x, center_y), 5)
-            # Blit the scaled surface to the screen
         
+        # Blit the scaled surface to the screen
         self.screen.blit(surf, (0, 0))
 
         # Update the display

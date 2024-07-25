@@ -47,6 +47,11 @@ def a_star(grid, init, goal, cost, delta, heuristic):
         print(f"Error: goal is not a list or tuple of length 2: {goal}, type: {type(goal)}")
         raise ValueError("goal must be a list or tuple of length 2")
     
+    # Edge case where path is blocked immediately
+    if grid[init[0]][init[1]] == 1 or grid[goal[0]][goal[1]] == 1:
+        print(f"Start or goal is blocked. Start: {init}, Goal: {goal}")
+        return 'fail', []
+    
     # open list
     path = []
     routes = []
@@ -84,6 +89,15 @@ def a_star(grid, init, goal, cost, delta, heuristic):
 
         # If there are no expandable nodes, return failure
         if not path:
+            print(f"A* failed: No expandable nodes")
+            print(f"Current position: {init_node.pos}")
+
+            # Printing map if no path is foundable 
+            '''
+            print(f"Visited cells:")
+            for row in visited:
+                print(row)
+            '''
             return 'fail', expand
 
         # Clear minList
@@ -134,6 +148,12 @@ def find_path(maze, start, end):
     if not (isinstance(end, (list, tuple)) and len(end) == 2):
         raise ValueError("end must be a list or tuple of length 2")
     
+    # Eval debug of A*
+    '''
+    print(f"Finding path from {start} to {end}")
+    print(f"Maze shape: {maze.shape}")
+    #'''
+    
     h_map = heuristic_generator(maze, end)
     # cost is the cost of moving once
     cost = 1
@@ -152,4 +172,14 @@ def find_path(maze, start, end):
     # print(f"end: {end}")
     
     path, expand = a_star(maze, start, end, cost, delta, h_map)
+
+    # Eval debug of A*
+    '''
+    if path == 'fail':
+        print("A* failed to find a path")
+        print(f"Maze:\n{maze}")
+    else:
+        print(f"Path found with {len(path)} steps")
+    #'''
+    
     return path, expand

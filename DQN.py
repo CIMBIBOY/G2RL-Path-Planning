@@ -2,9 +2,10 @@ from cnn import CNNLSTMModel
 import numpy as np
 import random
 from collections import deque
-from WarehouseEnv import WarehouseEnvironment
-from model_summary import print_model_summary
-import torch 
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.optim.lr_scheduler import StepLR
 
 class Agent:
     def __init__(self, enviroment, model):
@@ -23,7 +24,15 @@ class Agent:
         # Build networks
         self.q_network = model
         self.target_network = model
-        # self.alighn_target_model()
+        
+        # Initialize optimizer
+        self.optimizer = optim.Adam(self.q_network.parameters(), lr=1e-3)
+        
+        # Initialize learning rate scheduler
+        self.scheduler = StepLR(self.optimizer, step_size=100, gamma=0.1)
+        
+        # Initialize loss function
+        self.criterion = nn.MSELoss()
 
     def store(self, state, action, reward, next_state, terminated):
         # Store in experience replay pool
@@ -53,18 +62,15 @@ class Agent:
         return m_action
 
     def retrain(self, batch_size):
-        # Leverage experience pool training
         minibatch = random.sample(self.expirience_replay, batch_size)
-        criterion = torch.nn.MSELoss()
-        optimizer = torch.optim.RMSprop(self.q_network.parameters(), lr=3e-5)
         
         total_loss = 0.0
         
         for state, action, reward, next_state, terminated in minibatch:
-            state_tensor = torch.from_numpy(state)
-            next_state_tensor = torch.from_numpy(next_state)
-            target = self.q_network(state_tensor)
+            state_tensor = torch.from_numpy(state).float()
+            next_state_tensor = torch.from_numpy(next_state).float()
             
+            target = self.q_network(state_tensor)
             target_val = target.clone().detach()
             
             with torch.no_grad():
@@ -74,11 +80,18 @@ class Agent:
                     t = self.target_network(next_state_tensor)
                     target_val[0][action] = reward + self.gamma * torch.max(t).item()
             
-            optimizer.zero_grad()
-            loss = criterion(self.q_network(state_tensor), target_val)
+            self.optimizer.zero_grad()
+            loss = self.criterion(self.q_network(state_tensor), target_val)
             loss.backward()
-            optimizer.step()
+            
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
+            
+            self.optimizer.step()
             
             total_loss += loss.item()
+        
+        # Step the learning rate scheduler
+        self.scheduler.step()
         
         return total_loss / batch_size

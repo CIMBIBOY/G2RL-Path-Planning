@@ -14,7 +14,7 @@ from eval import evaluate_performance
 # or
 # python main.py --method qnet
 
-def dqn_training(env, num_episodes=420, timesteps_per_episode=1000):
+def dqn_training(env, num_episodes=2003, timesteps_per_episode=1000):
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
     batch_size = 3
     image = 0
@@ -41,10 +41,11 @@ def dqn_training(env, num_episodes=420, timesteps_per_episode=1000):
             state = next_state
 
             # Render the environment
-            env.render()
+            if env.pygame_render == True:
+                env.render()
             env.render_video(5, image)
             image += 1
-            env.render_gif()
+            # env.render_gif()
             
             if terminated:
                 agent.alighn_target_model()
@@ -97,7 +98,9 @@ def q_learning_training(env, num_episodes=100000):
             _, next_state, reward, done = env.step(action)
 
             # pygame visulaization, image+video rendering and gif
-            env.render()
+            # Render the environment
+            if env.pygame_render == True:
+                env.render()
             env.render_video(5,image)
             image = image + 1
             # env.render_gif()
