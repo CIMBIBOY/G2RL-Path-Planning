@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode, eval_folder='G2RL-Path-Planning/eval_images'):
+def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode, eval_folder='G2RL-Path-Planning/eval_img'):
     """
     Saves an evaluation image showing the environment, start and end positions, agent's path, and optimal path.
 
