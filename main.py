@@ -18,6 +18,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
     batch_size = 3
     image = 0
+    N = 100
 
     print_model_summary(agent.q_network, (batch_size, 1, 30, 30, 4), batch_size)
 
@@ -48,7 +49,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
             # env.render_gif()
             
             if terminated:
-                agent.alighn_target_model()
                 break
                 
             if len(agent.expirience_replay) > batch_size:
@@ -66,8 +66,12 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
         all_episode_rewards.append(episode_reward)
         all_episode_losses.append(episode_loss)
         
+        # Step the scheduler every N episodes
+        if (e + 1) % N == 0:
+            agent.scheduler.step()
+
         if (e + 1) % 1 == 0:
-            print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.2f}")
+            print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.2f}, Goal_reached: {env.arrived}")
     
     print(" ---------- Training Finished ----------")
 

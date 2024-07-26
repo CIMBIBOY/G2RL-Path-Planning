@@ -23,7 +23,10 @@ class Agent:
         
         # Build networks
         self.q_network = model
-        self.target_network = model
+        self.target_network = type(model)(30,30,4,4)  # Create a new instance of the same model type
+        self.target_network.load_state_dict(self.q_network.state_dict())  # Copy weights from q_network to target_network
+        self.target_network.eval()  # Set target network to evaluation mode
+        self.tau = 0.001  # Soft update parameter
         
         # Initialize optimizer
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=1e-3)
@@ -43,9 +46,11 @@ class Agent:
         model = CNNLSTMModel(48,48,4,4)
         return model
 
-    def alighn_target_model(self):
-        # Update target network
-        self.target_network.load_state_dict(self.q_network.state_dict())
+    def align_target_model(self):
+        # Soft update
+        for target_param, param in zip(self.target_network.parameters(), self.q_network.parameters()):
+            target_param.data.copy_(
+                self.tau * param.data + (1.0 - self.tau) * target_param.data)
     
     def act(self, state):
         state_tensor = torch.from_numpy(state)
@@ -70,28 +75,28 @@ class Agent:
             state_tensor = torch.from_numpy(state).float()
             next_state_tensor = torch.from_numpy(next_state).float()
             
-            target = self.q_network(state_tensor)
-            target_val = target.clone().detach()
+            current_q_values = self.q_network(state_tensor)
             
             with torch.no_grad():
-                if terminated:
-                    target_val[0][action] = reward
+                if not terminated:
+                    next_q_values = self.target_network(next_state_tensor)
+                    target_q_value = reward + self.gamma * torch.max(next_q_values).item()
                 else:
-                    t = self.target_network(next_state_tensor)
-                    target_val[0][action] = reward + self.gamma * torch.max(t).item()
+                    target_q_value = reward
+            
+            target = current_q_values.clone()
+            target[0][action] = target_q_value
             
             self.optimizer.zero_grad()
-            loss = self.criterion(self.q_network(state_tensor), target_val)
+            loss = self.criterion(current_q_values, target)
             loss.backward()
             
-            # Gradient clipping
             torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
             
             self.optimizer.step()
             
             total_loss += loss.item()
-        
-        # Step the learning rate scheduler
-        self.scheduler.step()
+
+            self.align_target_model()
         
         return total_loss / batch_size
