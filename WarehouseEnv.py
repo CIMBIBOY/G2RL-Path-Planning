@@ -39,6 +39,9 @@ class WarehouseEnvironment:
 
         # Agent reached end position count 
         self.arrived = 0
+        self.current_step = 0
+        self.episode_count = 0
+        self.max_steps = 0
 
         self.frames = []  # To store frames for .gif visualization
 
