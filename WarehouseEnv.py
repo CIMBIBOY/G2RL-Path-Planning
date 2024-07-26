@@ -84,6 +84,9 @@ class WarehouseEnvironment:
 
         # Increment the episode count
         self.episode_count += 1
+
+        self.current_step = 0
+        self.max_steps = 50 + 10 * self.episode_count
         
         # Re-randomize the start and goal cells of all dynamic obstacles after 50 episodes
         if self.episode_count % 50 == 0:
@@ -126,12 +129,26 @@ class WarehouseEnvironment:
         self.dynamic_coords = self.agents_paths
         self.global_mapper_arr = global_guidance(self.agents_paths[self.agent_idx], self.map_img_arr.squeeze())
 
+    def has_global_guidance(self):
+        half_fov = self.local_fov // 2
+        
+        local_guidance = self.global_mapper_arr[
+            max(0, self.agent_prev_coord[0] - half_fov):min(self.width, self.agent_prev_coord[0] + half_fov + 1),
+            max(0, self.agent_prev_coord[1] - half_fov):min(self.width, self.agent_prev_coord[1] + half_fov + 1)
+        ]
+        
+        # Check if there's any global guidance information (value less than 255) in the local observation
+        has_guidance = np.any(local_guidance < 255)
+        
+        return has_guidance
+
 
     def step(self, action):
         if len(self.init_arr) == 0:
             print("Run env.reset() first")
             return None, None, None, False
 
+        self.current_step += 1
         self.time_idx += 1
         conv, x, y = self.action_dict[action]
         # print(f'Action taken: {conv}')
@@ -152,6 +169,14 @@ class WarehouseEnvironment:
         self.agent_prev_coord = new_agent_coord
         if reached_goal == True:
             self.arrived = self.arrived + 1
+
+        # Check if there's global guidance in the local FOV
+        if not self.has_global_guidance():
+            isAgentDone = True 
+
+        # Check if we've reached the maximum number of steps
+        if self.current_step >= self.max_steps:
+            isAgentDone = True
 
         combined_arr = np.array([])
         if len(local_obs) > 0:
