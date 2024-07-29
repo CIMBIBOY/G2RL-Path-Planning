@@ -48,6 +48,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
             image += 1
             
             if terminated:
+                # agent.align_target_model()
                 break
             
             state = next_state
@@ -89,7 +90,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
         pickle.dump(all_episode_losses, f)
     with open('./models/dqn_goal_reached.pkl', 'wb') as f:
         pickle.dump(all_goal_reached, f)
-        
+
 
 def q_learning_training(env, num_episodes=100000):
     q_table = np.zeros([env.n_states, env.n_actions])
@@ -153,7 +154,7 @@ if __name__ == '__main__':
                         help='Choose the training method: deep Q-network or traditional Q-network')
     args = parser.parse_args()
 
-    env = WarehouseEnvironment()
+    env = WarehouseEnvironment(pygame_render=True)
 
     if args.method == 'dqn':
         dqn_training(env)
