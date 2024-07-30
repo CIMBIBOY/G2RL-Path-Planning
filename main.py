@@ -152,9 +152,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Choose between CCNLSTM agent supported DQN model or traditional Q-Learning')
     parser.add_argument('--method', type=str, choices=['dqn', 'qnet'], default='dqn',
                         help='Choose the training method: deep Q-network or traditional Q-network')
+    parser.add_argument('--render', type=str, choices=['on', 'off'], default='off',
+                        help='Choose to visualize the training in pygame? Options: --render on, or --render off')
     args = parser.parse_args()
 
-    env = WarehouseEnvironment(pygame_render=True)
+    if args.render == 'on':
+        env = WarehouseEnvironment(pygame_render=True)
+    elif args.render == 'off':
+        env = WarehouseEnvironment(pygame_render=False)
+    else:
+        print("Render automatically set to False!")
+        env = WarehouseEnvironment(pygame_render=False)
 
     if args.method == 'dqn':
         dqn_training(env)
