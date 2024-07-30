@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 from WarehouseEnv import WarehouseEnvironment
 from eval import evaluate_performance
 from DQN import Agent
