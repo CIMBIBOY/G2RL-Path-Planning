@@ -10,9 +10,9 @@ from cnn import CNNLSTMModel
 from model_summary import print_model_summary
 from eval import evaluate_performance
 
-# python main.py --method dqn
+# python3 main.py --render off --method dqn
 # or
-# python main.py --method qnet
+# python3 main.py --render off --method qnet
 
 def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
@@ -154,15 +154,20 @@ if __name__ == '__main__':
                         help='Choose the training method: deep Q-network or traditional Q-network')
     parser.add_argument('--render', type=str, choices=['on', 'off'], default='off',
                         help='Choose to visualize the training in pygame? Options: --render on, or --render off')
+   # Add an argument for the number of episodes
+    parser.add_argument('--episode', type=int, default=1000,
+                        help='Number of episodes for training.')
     args = parser.parse_args()
 
+    num_ep = args.episode
+
     if args.render == 'on':
-        env = WarehouseEnvironment(pygame_render=True)
+        env = WarehouseEnvironment(pygame_render=True, num_episodes = num_ep)
     elif args.render == 'off':
-        env = WarehouseEnvironment(pygame_render=False)
+        env = WarehouseEnvironment(pygame_render=False, num_episodes = num_ep)
     else:
         print("Render automatically set to False!")
-        env = WarehouseEnvironment(pygame_render=False)
+        env = WarehouseEnvironment(pygame_render=False, num_episodes = num_ep)
 
     if args.method == 'dqn':
         dqn_training(env)

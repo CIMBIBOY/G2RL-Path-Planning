@@ -199,7 +199,7 @@ class WarehouseEnvironment:
         img = Image.fromarray(self.init_arr, 'RGB')
 
         # Ensure the base directory 'training_images' exists
-        base_dir = '/Users/czimbermark/Documents/SZTAKI/G2RL/G2RL-Path-Planning/training_images'
+        base_dir = '/home/czimber_mark/G2RL-Path-Planning/training_images'
         os.makedirs(base_dir, exist_ok=True)
 
         # Create train_{train_index}_images directory if it does not exist
