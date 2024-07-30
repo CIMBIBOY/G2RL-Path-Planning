@@ -10,9 +10,9 @@ from cnn import CNNLSTMModel
 from model_summary import print_model_summary
 from eval import evaluate_performance
 
-# python3 main.py --render off --method dqn
+# python3 main.py --render off --method dqn --episode 100000
 # or
-# python3 main.py --render off --method qnet
+# python3 main.py --render off --method qnet --episode 100000
 
 def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
@@ -162,17 +162,17 @@ if __name__ == '__main__':
     num_ep = args.episode
 
     if args.render == 'on':
-        env = WarehouseEnvironment(pygame_render=True, num_episodes = num_ep)
+        env = WarehouseEnvironment(pygame_render=True)
     elif args.render == 'off':
-        env = WarehouseEnvironment(pygame_render=False, num_episodes = num_ep)
+        env = WarehouseEnvironment(pygame_render=False)
     else:
         print("Render automatically set to False!")
-        env = WarehouseEnvironment(pygame_render=False, num_episodes = num_ep)
+        env = WarehouseEnvironment(pygame_render=False)
 
     if args.method == 'dqn':
-        dqn_training(env)
+        dqn_training(env, num_episodes = num_ep)
     elif args.method == 'qnet':
-        q_table, rewards_window, all_rewards, all_losses, all_goal_reached = q_learning_training(env)
+        q_table, rewards_window, all_rewards, all_losses, all_goal_reached = q_learning_training(env, num_episodes = num_ep)
         
         with open('./models/q_learning_table.pkl','wb') as f:
             pickle.dump(q_table, f)
