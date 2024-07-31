@@ -24,14 +24,9 @@ class Agent:
         self.current_step = 0
         self.training_steps = total_training_steps
 
-        self.metal = metal 
-        if self.metal == 'cuda':
-            # Build networks
-            self.q_network = model.to('cuda')
-            self.target_network = type(model)(30,30,4,4).to('cuda')  # Create a new instance of the same model type
-        elif self.metal == 'cpu':
-            self.q_network = model
-            self.target_network = type(model)(30,30,4,4)
+        self.device = torch.device(metal)
+        self.q_network = model.to(self.device)
+        self.target_network = type(model)(30, 30, 4, 4).to(self.device)
 
         self.target_network.load_state_dict(self.q_network.state_dict())  # Copy weights from q_network to target_network
         self.target_network.eval()  # Set target network to evaluation mode
@@ -63,10 +58,7 @@ class Agent:
     
     def act(self, state):
         self.current_step += 1
-        if self.metal == 'cuda':
-            state_tensor = torch.from_numpy(state).float().unsqueeze(0).to('cuda')
-        elif self.metal == 'cpu':
-            state_tensor = torch.from_numpy(state).float().unsqueeze(0)
+        state_tensor = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
 
         # Update epsilon
         self.epsilon = self.epsilon_initial - (self.epsilon_initial - self.epsilon_final) * min(1, self.current_step / self.training_steps)
@@ -91,16 +83,14 @@ class Agent:
         
         total_loss = 0.0
         
+        self.optimizer.zero_grad()  # Move this outside the loop
+
         for state, action, reward, next_state, terminated in minibatch:
-            
-            if self.metal == 'cuda':
-                state = torch.from_numpy(state).float().to('cuda')
-                next_state = torch.from_numpy(next_state).float().to('cuda')
-            elif self.metal == 'cpu':
-                state = torch.from_numpy(state).float()
-                next_state = torch.from_numpy(next_state).float()
-           
-            current_q_values = self.q_network(state)
+            state = torch.from_numpy(state).float().to(self.device)
+            next_state = torch.from_numpy(next_state).float().to(self.device)
+        
+            with torch.no_grad():
+                current_q_values = self.q_network(state).detach()
             
             with torch.no_grad():
                 if not terminated:
@@ -112,16 +102,16 @@ class Agent:
             target = current_q_values.clone()
             target[0][action] = target_q_value
             
-            self.optimizer.zero_grad()
+            current_q_values = self.q_network(state)  # Recompute with grad
             loss = self.criterion(current_q_values, target)
             loss.backward()
             
-            torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
-            
-            self.optimizer.step()
-            
             total_loss += loss.item()
 
-            self.align_target_model()
+        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
+        
+        self.optimizer.step()
+        
+        self.align_target_model()  # Move this outside the loop
         
         return total_loss / batch_size

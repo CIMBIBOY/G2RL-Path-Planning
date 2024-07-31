@@ -5,6 +5,7 @@ import pickle
 import random
 import time
 import sys
+import torch
 
 from WarehouseEnv import WarehouseEnvironment
 from DQN import Agent
@@ -13,8 +14,16 @@ from model_summary import print_model_summary
 from eval import evaluate_performance
 
 '''
-python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cpu
+python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda
 '''
+
+def print_cuda_info():
+    if torch.cuda.is_available():
+        print(f"CUDA is available. Version: {torch.version.cuda}")
+        print(f"Number of CUDA devices: {torch.cuda.device_count()}")
+        print(f"CUDA device name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
+    else:
+        print("CUDA is not available.")
 
 def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu'):
     agent = Agent(env, CNNLSTMModel(30,30,4,4), metal = metal)
@@ -202,7 +211,7 @@ if __name__ == '__main__':
     parser.add_argument('--timesteps', type=int, default=33,
                         help='Number of timesteps for a single episode.')
     parser.add_argument('--metal', type=str, choices=['cpu', 'cuda'], default='cpu',
-                    help='Choose cpu or cude accelaration')
+                    help='Choose CUDA or CPU accelaration')
     args = parser.parse_args()
 
     num_ep = args.epochs
@@ -225,8 +234,13 @@ if __name__ == '__main__':
         _, state = env.reset() # image of first reset
         print(state.shape)
 
-    if args.metal == 'cpu': metal = 'cpu'
-    elif args.metal == 'cuda': metal = 'cuda'
+    if args.metal == 'cuda':
+        metal = 'cuda'
+        print('Metal is cuda')
+        print_cuda_info()  # Print CUDA info if CUDA is selected
+    elif args.metal == 'cpu':
+        metal = 'cpu'
+        print('Metal is CPU')
     else: print('Only cpu or cuda accelaration is supported')
 
     if args.method == 'dqn':
