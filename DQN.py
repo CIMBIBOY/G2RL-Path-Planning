@@ -58,7 +58,7 @@ class Agent:
     
     def act(self, state):
         self.current_step += 1
-        state_tensor = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+        state_tensor = torch.from_numpy(state).float().to(self.device)
 
         # Update epsilon
         self.epsilon = self.epsilon_initial - (self.epsilon_initial - self.epsilon_final) * min(1, self.current_step / self.training_steps)
