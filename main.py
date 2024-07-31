@@ -12,10 +12,12 @@ from cnn import CNNLSTMModel
 from model_summary import print_model_summary
 from eval import evaluate_performance
 
-# python3 main.py --render pygame --method dqn --epochs 100000 --timesteps 33
+'''
+python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cpu
+'''
 
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False):
-    agent = Agent(env, CNNLSTMModel(30,30,4,4))
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu'):
+    agent = Agent(env, CNNLSTMModel(30,30,4,4), metal = metal)
     batch_size = 3
     image = 0
     N = 100
@@ -199,6 +201,8 @@ if __name__ == '__main__':
                         help='Number of episodes for training.')
     parser.add_argument('--timesteps', type=int, default=33,
                         help='Number of timesteps for a single episode.')
+    parser.add_argument('--metal', type=str, choices=['cpu', 'cuda'], default='cpu',
+                    help='Choose cpu or cude accelaration')
     args = parser.parse_args()
 
     num_ep = args.epochs
@@ -220,6 +224,10 @@ if __name__ == '__main__':
         env = WarehouseEnvironment(pygame_render=False)
         _, state = env.reset() # image of first reset
         print(state.shape)
+
+    if args.metal == 'cpu': metal = 'cpu'
+    elif args.metal == 'cuda': metal = 'cuda'
+    else: print('Only cpu or cuda accelaration is supported')
 
     if args.method == 'dqn':
         dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video)

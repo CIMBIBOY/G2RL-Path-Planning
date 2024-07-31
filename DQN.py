@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 
 class Agent:
-    def __init__(self, enviroment, model, total_training_steps = 200000):
+    def __init__(self, enviroment, model, total_training_steps = 200000, metal = 'cpu'):
         
         # The number of states is the number of cells in the environment
         self._state_size = enviroment.n_states
@@ -23,11 +23,16 @@ class Agent:
         self.epsilon_final = 0.1
         self.current_step = 0
         self.training_steps = total_training_steps
-        
-        # Build networks
-        model.to('cuda')
-        self.target_network = type(model)(30,30,4,4).to('cuda')  # Create a new instance of the same model type
-    
+
+        self.metal = metal 
+        if self.metal == 'cuda':
+            # Build networks
+            self.q_network = model.to('cuda')
+            self.target_network = type(model)(30,30,4,4).to('cuda')  # Create a new instance of the same model type
+        elif self.metal == 'cpu':
+            self.q_network = model
+            self.target_network = type(model)(30,30,4,4)
+
         self.target_network.load_state_dict(self.q_network.state_dict())  # Copy weights from q_network to target_network
         self.target_network.eval()  # Set target network to evaluation mode
         self.tau = 0.001  # Soft update parameter
@@ -58,7 +63,10 @@ class Agent:
     
     def act(self, state):
         self.current_step += 1
-        state_tensor = torch.from_numpy(state).float().unsqueeze(0).to('cuda')
+        if self.metal == 'cuda':
+            state_tensor = torch.from_numpy(state).float().unsqueeze(0).to('cuda')
+        elif self.metal == 'cpu':
+            state_tensor = torch.from_numpy(state).float().unsqueeze(0)
 
         # Update epsilon
         self.epsilon = self.epsilon_initial - (self.epsilon_initial - self.epsilon_final) * min(1, self.current_step / self.training_steps)
@@ -84,14 +92,19 @@ class Agent:
         total_loss = 0.0
         
         for state, action, reward, next_state, terminated in minibatch:
-            state_tensor = torch.from_numpy(state).float().to('cuda')
-            next_state_tensor = torch.from_numpy(next_state).float().to('cuda')
             
-            current_q_values = self.q_network(state_tensor)
+            if self.metal == 'cuda':
+                state = torch.from_numpy(state).float().to('cuda')
+                next_state = torch.from_numpy(next_state).float().to('cuda')
+            elif self.metal == 'cpu':
+                state = torch.from_numpy(state).float()
+                next_state = torch.from_numpy(next_state).float()
+           
+            current_q_values = self.q_network(state)
             
             with torch.no_grad():
                 if not terminated:
-                    next_q_values = self.target_network(next_state_tensor)
+                    next_q_values = self.target_network(next_state)
                     target_q_value = reward + self.gamma * torch.max(next_q_values).item()
                 else:
                     target_q_value = reward
