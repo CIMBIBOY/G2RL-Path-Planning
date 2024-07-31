@@ -21,7 +21,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 200):
     batch_size = 3
     image = 0
     N = 100
-    timesteps_per_episode =  10 * env.agent_path_len
 
     print_model_summary(agent.q_network, (batch_size, 1, 30, 30, 4), batch_size)
 
@@ -37,11 +36,14 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 200):
             batch_loss = 0
             terminated = False
             
-            bar = progressbar.ProgressBar(maxval=timesteps_per_episode/10, 
-                                        widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+            timesteps_per_episode =  5 * env.agent_path_len
+            bar = progressbar.ProgressBar(maxval=timesteps_per_episode, 
+                                  widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
             bar.start()
             start_time = time.time()
             steps = 1
+
+            print(env.agent_path_len)
             
             for timestep in range(timesteps_per_episode):
                 action = agent.act(state)
@@ -68,8 +70,8 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 200):
                 episode_reward += reward
                 batch_reward += episode_reward
                 
-                if timestep % 10 == 0:
-                    bar.update(timestep / 10 + 1)
+                if timestep % 1 == 0:
+                    bar.update(timestep + 1)
                 
                 steps += 1
   
@@ -91,9 +93,8 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 200):
             if (e + 1) % 20 == 0: 
                 batch_episode_time = batch_episode_time / 60
                 print(f"\n---------- 20 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.2f}, Computing time: {computing_time:.2f} min,  Goal reached: {env.arrived} times\n")
-                batch_episode_time, batch_loss, batch_reward = 0
+                batch_episode_time = batch_loss = batch_reward = 0
                 
-
         print(" ---------- Training Finished ----------")
 
         # Eval of Deep Q-network

@@ -155,7 +155,7 @@ class WarehouseEnvironment:
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
 
         agent_goal = self.agent_path[-1]  # Get the goal from the agent's path
-        self.agent_path_len = len(return_path(self.agent_path))
+        self.agent_path_len = len(self.agent_path)
         
         # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
