@@ -30,7 +30,7 @@ class WarehouseEnvironment:
         # Agent id
         self.agent_idx = agent_idx
         # Agent's path length 
-        self.agent_path_len = np.inf     
+        self.agent_path_len = 100     
         # Partial field of view size
         self.local_fov = local_fov
         self.time_idx = 1
