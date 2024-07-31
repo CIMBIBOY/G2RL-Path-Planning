@@ -12,9 +12,9 @@ from cnn import CNNLSTMModel
 from model_summary import print_model_summary
 from eval import evaluate_performance
 
-# python3 main.py --render off --method dqn --epochs 100000 --timesteps 33
+# python3 main.py --render pygame --method dqn --epochs 100000 --timesteps 33
 
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False):
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
     batch_size = 3
     image = 0
@@ -49,8 +49,9 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33):
                 # Render the environment
                 if env.pygame_render == True:
                     env.render()
-                env.render_video(5, image)
-                image += 1
+                if save_images == True:    
+                    env.render_video(5, image)
+                    image += 1
                 
                 if terminated:
                     # agent.align_target_model()
@@ -61,16 +62,17 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33):
                 if len(agent.expirience_replay) > batch_size:
                     loss = agent.retrain(batch_size)
                     episode_loss += loss
-                    batch_loss += episode_loss
-                    
+                       
                 episode_reward += reward
-                batch_reward += episode_reward
                 
                 if timestep % 1 == 0:
                     bar.update(timestep + 1)
                 
                 steps += 1
-  
+
+            batch_loss += episode_loss
+            batch_reward += episode_reward
+
             end_time = time.time()
             bar.finish()
             computing_time = (end_time - start_time) / steps
@@ -106,7 +108,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33):
             pickle.dump(all_episode_losses, f)
 
 
-def q_learning_training(env, num_episodes=100000):
+def q_learning_training(env, num_episodes=100000, save_images = False):
     q_table = np.zeros([env.n_states, env.n_actions])
     alpha, gamma, epsilon = 0.3, 0.9, 0.1
     rewards_window, all_rewards, all_losses = [], [], []
@@ -129,8 +131,9 @@ def q_learning_training(env, num_episodes=100000):
                 # pygame visulaization, image+video rendering and gif
                 if env.pygame_render == True:
                     env.render()
-                env.render_video(5,image)
-                image = image + 1
+                if save_images == True:    
+                    env.render_video(5, image)
+                    image += 1
                 
                 old_value = q_table[state, action]
                 next_max = np.max(q_table[next_state])
@@ -189,8 +192,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parser for training script of G2RL.')
     parser.add_argument('--method', type=str, choices=['dqn', 'qnet'], default='dqn',
                         help='Choose the training method: deep Q-network or traditional Q-network')
-    parser.add_argument('--render', type=str, choices=['on', 'off'], default='off',
-                        help='Choose to visualize the training in pygame? Options: --render on, or --render off')
+    parser.add_argument('--render', type=str, choices=['pygame', 'all', 'off'], default='off',
+                        help='Choose to visualize the training in pygame? Options: --render pygame, or --render off, or --render all for video and pygame rendering')
    # Add an argument for the number of episodes
     parser.add_argument('--epochs', type=int, default=1000,
                         help='Number of episodes for training.')
@@ -201,7 +204,10 @@ if __name__ == '__main__':
     num_ep = args.epochs
     num_timesteps = args.timesteps
 
-    if args.render == 'on':
+    if args.render == 'all': video = True
+    else: video = False
+
+    if args.render == 'pygame':
         env = WarehouseEnvironment(pygame_render=True)
         _, state = env.reset() # image of first reset
         print(state.shape)
@@ -216,9 +222,9 @@ if __name__ == '__main__':
         print(state.shape)
 
     if args.method == 'dqn':
-        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps)
+        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video)
     elif args.method == 'qnet':
-        q_learning_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps)   
+        q_learning_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video)   
     else: print("No method choosen or type error in parsing argument! Please eaither use command: \npython main.py --method dqn \nor\n python main.py --method qnet")
 
     env.close()
