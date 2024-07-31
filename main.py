@@ -36,13 +36,13 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
     all_episode_rewards = []
     all_episode_losses = []
     batch_episode_time = 0
+    batch_loss = 0
+    batch_reward = 0
     try:
         for e in range(num_episodes):
             _, state = env.reset()
             episode_reward = 0
-            batch_reward = 0
             episode_loss = 0
-            batch_loss = 0
             terminated = False
             
             timesteps_per_episode =  3 * env.agent_path_len
