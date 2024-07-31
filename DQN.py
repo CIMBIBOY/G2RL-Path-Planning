@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 
 class Agent:
-    def __init__(self, enviroment, model):
+    def __init__(self, enviroment, model, total_training_steps = 200000):
         
         # The number of states is the number of cells in the environment
         self._state_size = enviroment.n_states
@@ -19,7 +19,10 @@ class Agent:
         
         # Initialize discount and exploration rate
         self.gamma = 0.6
-        self.epsilon = 0.1
+        self.epsilon_initial = 1
+        self.epsilon_final = 0.1
+        self.current_step = 0
+        self.training_steps = total_training_steps
         
         # Build networks
         self.q_network = model
@@ -53,8 +56,12 @@ class Agent:
                 self.tau * param.data + (1.0 - self.tau) * target_param.data)
     
     def act(self, state):
+        self.current_step += 1
         state_tensor = torch.from_numpy(state)
 
+        # Update epsilon
+        self.epsilon = self.epsilon_initial - (self.epsilon_initial - self.epsilon_final) * min(1, self.current_step / self.training_steps)
+        
         # take action
         if np.random.rand() <= self.epsilon:
             action = random.choice(self._action_space)
@@ -95,7 +102,7 @@ class Agent:
             
             self.optimizer.step()
             
-            total_loss += loss.item()
+            total_loss -= loss.item()
 
             self.align_target_model()
         

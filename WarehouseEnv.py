@@ -39,9 +39,7 @@ class WarehouseEnvironment:
 
         # Agent reached end position count 
         self.arrived = 0
-        self.current_step = 0
         self.episode_count = 0
-        self.max_steps = 0
 
         self.frames = []  # To store frames for .gif visualization
 
@@ -87,9 +85,6 @@ class WarehouseEnvironment:
 
         # Increment the episode count
         self.episode_count += 1
-
-        self.current_step = 0
-        self.max_steps = 50 + 10 * self.episode_count
         
         # Re-randomize the start and goal cells of all dynamic obstacles after 50 episodes
         if self.episode_count % 50 == 0:
@@ -151,7 +146,6 @@ class WarehouseEnvironment:
             print("Run env.reset() first")
             return None, None, None, False
 
-        self.current_step += 1
         self.time_idx += 1
         conv, x, y = self.action_dict[action]
         # print(f'Action taken: {conv}')
@@ -177,10 +171,6 @@ class WarehouseEnvironment:
         if not self.has_global_guidance():
             isAgentDone = True 
 
-        # Check if we've reached the maximum number of steps
-        if self.current_step >= self.max_steps:
-            isAgentDone = True
-
         combined_arr = np.array([])
         if len(local_obs) > 0:
             self.scenes.append(Image.fromarray(local_obs, 'RGB'))
@@ -199,7 +189,7 @@ class WarehouseEnvironment:
         img = Image.fromarray(self.init_arr, 'RGB')
 
         # Ensure the base directory 'training_images' exists
-        base_dir = '/home/czimber_mark/G2RL-Path-Planning/training_images'
+        base_dir = 'G2RL-Path-Planning/training_images'
         os.makedirs(base_dir, exist_ok=True)
 
         # Create train_{train_index}_images directory if it does not exist
