@@ -25,8 +25,9 @@ class Agent:
         self.training_steps = total_training_steps
         
         # Build networks
-        self.q_network = model
-        self.target_network = type(model)(30,30,4,4)  # Create a new instance of the same model type
+        model.to('cuda')
+        self.target_network = type(model)(30,30,4,4).to('cuda')  # Create a new instance of the same model type
+    
         self.target_network.load_state_dict(self.q_network.state_dict())  # Copy weights from q_network to target_network
         self.target_network.eval()  # Set target network to evaluation mode
         self.tau = 0.001  # Soft update parameter
@@ -57,7 +58,7 @@ class Agent:
     
     def act(self, state):
         self.current_step += 1
-        state_tensor = torch.from_numpy(state)
+        state_tensor = torch.from_numpy(state).float().unsqueeze(0).to('cuda')
 
         # Update epsilon
         self.epsilon = self.epsilon_initial - (self.epsilon_initial - self.epsilon_final) * min(1, self.current_step / self.training_steps)
@@ -65,7 +66,7 @@ class Agent:
         if self.epsilon == 0.1 and epsilon_final == False:
             print("Exploration value reached 0.1 e-greedy value")
             epsilon_final = True
-            
+
         # take action
         if np.random.rand() <= self.epsilon:
             action = random.choice(self._action_space)
@@ -83,8 +84,8 @@ class Agent:
         total_loss = 0.0
         
         for state, action, reward, next_state, terminated in minibatch:
-            state_tensor = torch.from_numpy(state).float()
-            next_state_tensor = torch.from_numpy(next_state).float()
+            state_tensor = torch.from_numpy(state).float().to('cuda')
+            next_state_tensor = torch.from_numpy(next_state).float().to('cuda')
             
             current_q_values = self.q_network(state_tensor)
             
@@ -106,7 +107,7 @@ class Agent:
             
             self.optimizer.step()
             
-            total_loss -= loss.item()
+            total_loss += loss.item()
 
             self.align_target_model()
         
