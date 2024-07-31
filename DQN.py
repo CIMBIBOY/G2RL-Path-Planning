@@ -61,7 +61,11 @@ class Agent:
 
         # Update epsilon
         self.epsilon = self.epsilon_initial - (self.epsilon_initial - self.epsilon_final) * min(1, self.current_step / self.training_steps)
-        
+        epsilon_final = False
+        if self.epsilon == 0.1 and epsilon_final == False:
+            print("Exploration value reached 0.1 e-greedy value")
+            epsilon_final = True
+            
         # take action
         if np.random.rand() <= self.epsilon:
             action = random.choice(self._action_space)

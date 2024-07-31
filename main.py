@@ -12,27 +12,29 @@ from cnn import CNNLSTMModel
 from model_summary import print_model_summary
 from eval import evaluate_performance
 
-# python3 main.py --render off --method dqn --episode 100000
+# python3 main.py --render off --method dqn --steps 100000
 # or
 # python3 main.py --render off --method qnet --episode 100000
 
-def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 200):
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
     batch_size = 3
     image = 0
     N = 100
+    timesteps_per_episode =  10 * env.agent_path_len
 
     print_model_summary(agent.q_network, (batch_size, 1, 30, 30, 4), batch_size)
 
     all_episode_rewards = []
     all_episode_losses = []
-    all_goal_reached = []
     batch_episode_time = 0
     try:
         for e in range(num_episodes):
             _, state = env.reset()
             episode_reward = 0
+            batch_reward = 0
             episode_loss = 0
+            batch_loss = 0
             terminated = False
             
             bar = progressbar.ProgressBar(maxval=timesteps_per_episode/10, 
@@ -61,16 +63,19 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
                 if len(agent.expirience_replay) > batch_size:
                     loss = agent.retrain(batch_size)
                     episode_loss += loss
+                    batch_loss += episode_loss
                     
                 episode_reward += reward
+                batch_reward += episode_reward
                 
                 if timestep % 10 == 0:
-                    bar.update(timestep/10 + 1)
+                    bar.update(timestep / 10 + 1)
+                
+                steps += 1
   
             end_time = time.time()
             bar.finish()
             computing_time = (end_time - start_time) / steps
-            steps += 1
             batch_episode_time += computing_time
             
             # Log the episode-wise metrics
@@ -82,11 +87,12 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
                 agent.scheduler.step()
 
             if (e + 1) % 1 == 0:
-                print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.2f}, Goal_reached: {env.arrived}, Computing time: {computing_time:.4f} s/step")
+                print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.2f}, Computing time: {computing_time:.4f} s/step")
             if (e + 1) % 20 == 0: 
                 batch_episode_time = batch_episode_time / 60
-                print(f"Minutes of computing 20 episodes: {computing_time:.2f} min")
-                batch_episode_time = 0
+                print(f"\n---------- 20 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.2f}, Computing time: {computing_time:.2f} min,  Goal reached: {env.arrived} times\n")
+                batch_episode_time, batch_loss, batch_reward = 0
+                
 
         print(" ---------- Training Finished ----------")
 
@@ -106,14 +112,14 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode=1000):
 def q_learning_training(env, num_episodes=100000):
     q_table = np.zeros([env.n_states, env.n_actions])
     alpha, gamma, epsilon = 0.3, 0.9, 0.1
-    rewards_window, all_rewards, all_losses, all_goal_reached = [], [], [], []
+    rewards_window, all_rewards, all_losses = [], [], []
     image = 0
     batch_episode_time = 0
 
     try: 
         for i in range(1, num_episodes + 1):
             state, _ = env.reset()
-            epochs, penalties, reward, episode_loss = 0, 0, 0, 0
+            penalties, reward, episode_loss = 0, 0, 0
             done = False
             
             start_time = time.time()
@@ -142,11 +148,10 @@ def q_learning_training(env, num_episodes=100000):
                     penalties += 1
                 
                 state = next_state
-                epochs += 1
+                steps += 1
                 
             end_time = time.time()
             computing_time = (end_time - start_time) / steps
-            steps += 1
             batch_episode_time += computing_time
 
             all_rewards.append(reward)
