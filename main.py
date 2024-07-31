@@ -12,11 +12,9 @@ from cnn import CNNLSTMModel
 from model_summary import print_model_summary
 from eval import evaluate_performance
 
-# python3 main.py --render off --method dqn --steps 100000
-# or
-# python3 main.py --render off --method qnet --episode 100000
+# python3 main.py --render off --method dqn --epochs 100000 --timesteps 33
 
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 200):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33):
     agent = Agent(env, CNNLSTMModel(30,30,4,4))
     batch_size = 3
     image = 0
@@ -36,14 +34,12 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 200):
             batch_loss = 0
             terminated = False
             
-            timesteps_per_episode =  5 * env.agent_path_len
+            timesteps_per_episode =  3 * env.agent_path_len
             bar = progressbar.ProgressBar(maxval=timesteps_per_episode, 
                                   widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
             bar.start()
             start_time = time.time()
             steps = 1
-
-            print(env.agent_path_len)
             
             for timestep in range(timesteps_per_episode):
                 action = agent.act(state)
@@ -161,7 +157,6 @@ def q_learning_training(env, num_episodes=100000):
             if i % 10 == 0:
                 rewards_window.append(sum(all_rewards[-100:])/100)
                 avg_loss = sum(all_losses[-100:])/100
-                goal_reached_rate = sum(all_goal_reached[-100:])/100
                 print(f"Episode: {i}, Reward: {reward:.2f}, Avg Loss: {avg_loss:.4f}, Goal Reached Rate: {goal_reached_rate:.2f}, Computing time: {computing_time:.4f} s/step")
             if i % 20 == 0: 
                 batch_episode_time = batch_episode_time / 60
@@ -191,30 +186,39 @@ def q_learning_training(env, num_episodes=100000):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Choose between CCNLSTM agent supported DQN model or traditional Q-Learning')
+    parser = argparse.ArgumentParser(description='Parser for training script of G2RL.')
     parser.add_argument('--method', type=str, choices=['dqn', 'qnet'], default='dqn',
                         help='Choose the training method: deep Q-network or traditional Q-network')
     parser.add_argument('--render', type=str, choices=['on', 'off'], default='off',
                         help='Choose to visualize the training in pygame? Options: --render on, or --render off')
    # Add an argument for the number of episodes
-    parser.add_argument('--steps', type=int, default=1000,
+    parser.add_argument('--epochs', type=int, default=1000,
                         help='Number of episodes for training.')
+    parser.add_argument('--timesteps', type=int, default=33,
+                        help='Number of timesteps for a single episode.')
     args = parser.parse_args()
 
-    num_ep = args.steps
+    num_ep = args.epochs
+    num_timesteps = args.timesteps
 
     if args.render == 'on':
         env = WarehouseEnvironment(pygame_render=True)
+        _, state = env.reset() # image of first reset
+        print(state.shape)
     elif args.render == 'off':
         env = WarehouseEnvironment(pygame_render=False)
+        _, state = env.reset() # image of first reset
+        print(state.shape)
     else:
         print("Render automatically set to False!")
         env = WarehouseEnvironment(pygame_render=False)
+        _, state = env.reset() # image of first reset
+        print(state.shape)
 
     if args.method == 'dqn':
-        dqn_training(env, num_episodes = num_ep)
+        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps)
     elif args.method == 'qnet':
-        q_learning_training(env, num_episodes = num_ep)   
+        q_learning_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps)   
     else: print("No method choosen or type error in parsing argument! Please eaither use command: \npython main.py --method dqn \nor\n python main.py --method qnet")
 
     env.close()
