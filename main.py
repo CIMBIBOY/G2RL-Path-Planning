@@ -223,20 +223,19 @@ if __name__ == '__main__':
     if args.render == 'pygame':
         env = WarehouseEnvironment(pygame_render=True)
         _, state = env.reset() # image of first reset
-        print(state.shape)
+        print(f"Input tensor dimension (state.shape): {state.shape}")
     elif args.render == 'off':
         env = WarehouseEnvironment(pygame_render=False)
         _, state = env.reset() # image of first reset
-        print(state.shape)
+        print(f"Input tensor dimension (state.shape): {state.shape}")
     else:
         print("Render automatically set to False!")
         env = WarehouseEnvironment(pygame_render=False)
         _, state = env.reset() # image of first reset
-        print(state.shape)
+        print(f"Input tensor dimension (state.shape): {state.shape}")
 
     if args.metal == 'cuda':
         metal = 'cuda'
-        print('Metal is cuda')
         print_cuda_info()  # Print CUDA info if CUDA is selected
     elif args.metal == 'cpu':
         metal = 'cpu'
