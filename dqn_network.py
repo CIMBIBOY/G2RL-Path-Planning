@@ -28,6 +28,8 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
     try:        
         for e in range(num_episodes):
+
+            if num_episodes < 2: print(state.device)
             _, state = env.reset()
             episode_reward = 0
             episode_loss = 0

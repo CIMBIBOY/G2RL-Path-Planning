@@ -114,4 +114,4 @@ class Agent:
         
         self.align_target_model()  # Move this outside the loop
         
-        return total_loss / batch_size
+        return total_loss 
