@@ -46,11 +46,9 @@ class WarehouseEnvironment:
         self.frames = []  # To store frames for .gif visualization
 
         self.pygame_render = pygame_render
-        if pygame_render == True: 
-            # Real-time visualization with pygame
-            pygame.init()
-            self.screen = pygame.display.set_mode((200, 200))
-            self.clock = pygame.time.Clock()
+        pygame.init()
+        self.screen = None
+        self.clock = None
 
     
     def reset(self):
@@ -192,7 +190,7 @@ class WarehouseEnvironment:
         img = Image.fromarray(self.init_arr, 'RGB')
 
         # Ensure the base directory 'training_images' exists
-        base_dir = 'G2RL-Path-Planning/training_images'
+        base_dir = 'training_images'
         os.makedirs(base_dir, exist_ok=True)
 
         # Create train_{train_index}_images directory if it does not exist
@@ -233,6 +231,15 @@ class WarehouseEnvironment:
         imageio.mimsave("data/g2rl.gif", self.frames, duration=0.5, loop=0)
 
     def render(self):
+        if self.pygame_render:  # Check if rendering is enabled
+            if self.screen is None:  # Initialize only if not already initialized
+                pygame.init()
+                self.screen = pygame.display.set_mode((200, 200))
+                self.clock = pygame.time.Clock()
+
+        if self.pygame_render == False:
+            pygame.quit()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
