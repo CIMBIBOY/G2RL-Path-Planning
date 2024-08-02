@@ -7,7 +7,7 @@ import time
 from eval import evaluate_performance
 import numpy as np
 
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 3):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 32):
     
     # Load model weights if provided
     if model_weights_path:
@@ -103,9 +103,9 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 if (e + 1) % 1 == 0:
                     print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.2f}, Computing time: {computing_time:.4f} s/step")
 
-                if (e + 1) % 20 == 0: 
-                    batch_episode_time = batch_episode_time / 60
-                    print(f"\n---------- 20 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.2f}, Computing time: {computing_time:.2f} min,  Goal reached: {env.arrived} times\n")
+                if (e + 1) % 420 == 0: 
+                    batch_episode_time = batch_episode_time 
+                    print(f"\n---------- 20 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.2f}, Computing time: {computing_time:.2f} sec/420 epochs,  Goal reached: {env.arrived} times\n")
                     batch_episode_time = batch_loss = batch_reward = 0
                     
                     # Save the model weights

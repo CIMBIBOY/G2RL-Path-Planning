@@ -17,3 +17,5 @@ def init_parser(self):
                         help='Choose whether to train from scratch or retrain an existing model.')
     self.add_argument('--model_weights', type=str, default=None,
                         help='Path to the model weights file (required if --train is set to retrain).')
+    self.add_argument('--batch', type=int, default=32, 
+                    help='Batch size for training process')
