@@ -3,5 +3,7 @@ __pycache__
 .idea
 
 .g2rl/
-.g2rl/
-.g2rl/
+.models/
+.log/
+.weights/
+
