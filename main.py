@@ -6,9 +6,9 @@ from q_learning import q_learning_training
 from parser_init import init_parser
 
 '''
-python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cpu --train scratch
+python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cpu --train scratch --batch 32
 
-python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train scratch 
+python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train scratch --batch 32
 
 --model_weights models/dqn_model.pth
 '''
@@ -23,6 +23,7 @@ if __name__ == '__main__':
 
     num_ep = args.epochs
     num_timesteps = args.timesteps
+    batch = args.batch
 
     if args.render == 'all': video = True
     else: video = False
@@ -56,7 +57,7 @@ if __name__ == '__main__':
         model_weights_path = args.model_weights
 
     if args.method == 'dqn':
-        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video)
+        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video, batch_size=batch)
     elif args.method == 'qnet':
         q_learning_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video)   
     else: print("No method choosen or type error in parsing argument! Please eaither use command: \npython main.py --method dqn \nor\n python main.py --method qnet")
