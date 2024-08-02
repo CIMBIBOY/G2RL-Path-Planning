@@ -4,6 +4,5 @@ __pycache__
 
 .g2rl/
 .models/
-.log/
-.weights/
-
+.weights/dqn_model_cpu.pth
+.weights/dqn_model_cuda.pth

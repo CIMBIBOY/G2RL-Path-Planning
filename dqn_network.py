@@ -26,97 +26,86 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
     batch_loss = 0
     batch_reward = 0
 
-    try:
-        with torch.profiler.profile(
-            activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
-            schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=2),
-            on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/dqn_profiler'),
-            record_shapes=True,
-            with_stack=True
-        ) as prof:
+    try:        
+        for e in range(num_episodes):
+            _, state = env.reset()
+            episode_reward = 0
+            episode_loss = 0
+            terminated = False
+            
+            timesteps_per_episode =  3 * env.agent_path_len
+            bar = progressbar.ProgressBar(maxval=timesteps_per_episode, 
+                                widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+            bar.start()
+            start_time = time.time()
+            steps = 1
+
+            if num_episodes < 2: 
+                print(f"Currently running train on device: {state.device}")
+            
+            for timestep in range(timesteps_per_episode):
+
+                action = agent.act(state)
+                next_state, _, reward, terminated = env.step(action) 
+                agent.store(state, action, reward, next_state, terminated)
+
+                # Check for rendering toggle
+                if env.pygame_render:
+                    env.render()
+                if save_images:
+                    env.render_video(5, image)
+                    image += 1
                 
-            for e in range(num_episodes):
-                _, state = env.reset()
-                episode_reward = 0
-                episode_loss = 0
-                terminated = False
+                if terminated:
+                    # agent.align_target_model()
+                    break
                 
-                timesteps_per_episode =  3 * env.agent_path_len
-                bar = progressbar.ProgressBar(maxval=timesteps_per_episode, 
-                                    widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
-                bar.start()
-                start_time = time.time()
-                steps = 1
-
-                if num_episodes < 2: 
-                    print(f"Currently running train on device: {state.device}")
+                state = next_state
+                    
+                if len(agent.expirience_replay) > batch_size:
+                    loss = agent.retrain(batch_size)
+                    episode_loss += loss
+                    
+                episode_reward += reward
                 
-                for timestep in range(timesteps_per_episode):
-
-                    action = agent.act(state)
-                    next_state, _, reward, terminated = env.step(action) 
-                    agent.store(state, action, reward, next_state, terminated)
-
-                    # Check for rendering toggle
-                    if env.pygame_render:
-                        env.render()
-                    if save_images:
-                        env.render_video(5, image)
-                        image += 1
-                    
-                    if terminated:
-                        # agent.align_target_model()
-                        break
-                    
-                    state = next_state
-                        
-                    if len(agent.expirience_replay) > batch_size:
-                        loss = agent.retrain(batch_size)
-                        episode_loss += loss
-                        
-                    episode_reward += reward
-                    
-                    if timestep % 1 == 0:
-                        bar.update(timestep + 1)
-                    
-                    steps += 1
-
-                batch_loss += episode_loss
-                batch_reward += episode_reward
-
-                end_time = time.time()
-                bar.finish()
-                computing_time = (end_time - start_time) / steps
-                batch_episode_time += computing_time
+                if timestep % 1 == 0:
+                    bar.update(timestep + 1)
                 
-                # Log the episode-wise metrics
-                all_episode_rewards.append(episode_reward)
-                all_episode_losses.append(episode_loss)
+                steps += 1
 
-                # Profiler update
-                prof.step()
+            batch_loss += episode_loss
+            batch_reward += episode_reward
+
+            end_time = time.time()
+            bar.finish()
+            computing_time = (end_time - start_time) / steps
+            batch_episode_time += computing_time
+            
+            # Log the episode-wise metrics
+            all_episode_rewards.append(episode_reward)
+            all_episode_losses.append(episode_loss)
+
+            # Step the scheduler every N episodes
+            if (e + 1) % N == 0:
+                agent.scheduler.step()
+
+            if (e + 1) % 1 == 0:
+                print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.2f}, Computing time: {computing_time:.4f} s/step")
+
+            if (e + 1) % 420 == 0: 
+                batch_episode_time = batch_episode_time 
+                print(f"\n---------- 20 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.2f}, Computing time: {computing_time:.2f} sec/420 epochs,  Goal reached: {env.arrived} times\n")
+                batch_episode_time = batch_loss = batch_reward = 0
                 
-                # Step the scheduler every N episodes
-                if (e + 1) % N == 0:
-                    agent.scheduler.step()
+                # Save the model weights
+                torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}.pth')  # For DQN
+                
+        print(" ---------- Training Finished ----------")
 
-                if (e + 1) % 1 == 0:
-                    print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.2f}, Computing time: {computing_time:.4f} s/step")
-
-                if (e + 1) % 420 == 0: 
-                    batch_episode_time = batch_episode_time 
-                    print(f"\n---------- 20 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.2f}, Computing time: {computing_time:.2f} sec/420 epochs,  Goal reached: {env.arrived} times\n")
-                    batch_episode_time = batch_loss = batch_reward = 0
-                    
-                    # Save the model weights
-                    torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}.pth')  # For DQN
-                    
-            print(" ---------- Training Finished ----------")
-
-            # Eval of Deep Q-network
-            print(" ---------- Evaluating Performance ----------")
-            performance_metrics = evaluate_performance(env, agent, num_episodes=154)
-            print(performance_metrics)
+        # Eval of Deep Q-network
+        print(" ---------- Evaluating Performance ----------")
+        performance_metrics = evaluate_performance(env, agent, num_episodes=154)
+        print(performance_metrics)
 
     finally:
         # Save the training metrics
