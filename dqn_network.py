@@ -96,7 +96,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 batch_episode_time = batch_loss = batch_reward = 0
                 
                 # Save the model weights
-                torch.save(agent.q_network.state_dict(), f'./models/dqn_model.pth')  # For DQN
+                torch.save(agent.q_network.state_dict(), f'./models/dqn_model_{metal}.pth')  # For DQN
                 
         print(" ---------- Training Finished ----------")
 
@@ -107,6 +107,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
     finally:
         # Save the training metrics
-        np.save('./models/dqn_episode_rewards.npy', all_episode_rewards)
-        np.savez('./models/dqn_metrics.npz', rewards=all_episode_rewards, losses=all_episode_losses)
+        np.save(f'./models/dqn_episode_rewards_{metal}.npy', all_episode_rewards)
+        np.savez(f'./models/dqn_metrics_{metal}.npz', rewards=all_episode_rewards, losses=all_episode_losses)
         
