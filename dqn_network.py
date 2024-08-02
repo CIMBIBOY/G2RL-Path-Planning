@@ -88,11 +88,11 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             all_episode_losses.append(episode_loss)
 
             if (e + 1) % 1 == 0:
-                print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.2f}, Computing time: {computing_time:.4f} s/step")
+                print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/step")
 
             if (e + 1) % N == 0: 
                 batch_episode_time = batch_episode_time 
-                print(f"\n---------- 100 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.2f}, Computing time: {computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times\n")
+                print(f"\n---------- 100 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times\n")
                 batch_episode_time = batch_loss = batch_reward = 0
                 
                 # Save the model weights

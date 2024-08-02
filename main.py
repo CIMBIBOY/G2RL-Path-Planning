@@ -8,7 +8,7 @@ from parser_init import init_parser
 '''
 python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cpu --train scratch --batch 32
 
-python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train scratch --batch 512
+python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train retrain --model_weights G2RL-Path-Planning/weights/dqn_model_cpu.pth --batch 512
 
 --model_weights models/dqn_model.pth
 '''

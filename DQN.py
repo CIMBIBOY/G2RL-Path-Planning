@@ -110,9 +110,10 @@ class Agent:
 
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
         
-        self.scheduler.step()
         self.optimizer.step()
         
         self.align_target_model()  # Move this outside the loop
+
+        self.scheduler.step()
         
         return total_loss 
