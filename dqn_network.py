@@ -26,9 +26,12 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
     all_episode_rewards = []
     all_episode_losses = []
-    batch_episode_time = 0
     batch_loss = 0
     batch_reward = 0
+    bar_steps = 0
+    batch_steps = 0
+    batch_start_time = time.time()
+    start_time = time.time()
 
     try:        
         for e in range(num_episodes):
@@ -36,12 +39,15 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             episode_reward = 0
             episode_loss = 0
             terminated = False
-            
+
+            if e == 0: print(" ---------- Training Started ----------")
+
             timesteps_per_episode =  3 * env.agent_path_len
-            bar = progressbar.ProgressBar(maxval=timesteps_per_episode, 
-                                widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
-            bar.start()
-            start_time = time.time()
+            if e == 0 or e + 1 % 10 == 0:
+                bar = progressbar.ProgressBar(maxval=10 * timesteps_per_episode, 
+                                    widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+                bar.start()
+            
             steps = 1
 
             if metal == 'cuda':
@@ -70,31 +76,37 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                     episode_loss += loss
                     
                 episode_reward += reward
-                
-                if timestep % 1 == 0:
-                    bar.update(timestep + 1)
-                
+
+                # Update progress bar
+                bar_steps += 1
+                batch_steps += 1
+                if e % 10 < 10 - 1 or timestep == timesteps_per_episode - 1:
+                    bar.update(bar_steps)
+        
                 steps += 1
 
             batch_loss += episode_loss
             batch_reward += episode_reward
-
-            end_time = time.time()
-            bar.finish()
-            computing_time = (end_time - start_time) / steps
-            batch_episode_time += computing_time
             
             # Log the episode-wise metrics
             all_episode_rewards.append(episode_reward)
             all_episode_losses.append(episode_loss)
 
-            if (e + 1) % 1 == 0:
+            if (e + 1) % 10 == 0:
+                end_time = time.time()
+                computing_time = (end_time - start_time) / steps
                 print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/step")
+                # Reset and restart progress bar
+                bar.finish()
+                bar_steps = 0
+                start_time = time.time()
 
             if (e + 1) % N == 0: 
-                batch_episode_time = batch_episode_time 
-                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n")
-                batch_episode_time = batch_loss = batch_reward = agent.rand_act = agent.netw_act = 0
+                batch_end_time = time.time()
+                batch_computing_time = (batch_end_time - batch_start_time) / batch_steps
+                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {batch_computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n")
+                batch_steps = batch_loss = batch_reward = agent.rand_act = agent.netw_act = 0
+                batch_start_time = time.time()
                 
                 # Save the model weights
                 torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}_{train_num}.pth')  # For DQN
