@@ -8,14 +8,12 @@ from eval import evaluate_performance
 import numpy as np
 
 def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 8, train_num = 1):
-    
-
     # Set the device to CUDA if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Currently running training on device: {device}")
 
     # Initialize the agent with its network
-    agent = Agent(env, CNNLSTMModel(30,30,4,4).to(device), metal = metal)
+    agent = Agent(env, CNNLSTMModel(30,30,4,4).to(device), metal = device)
     agent.batch_size = batch_size
     N = 100
 
@@ -45,6 +43,9 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             bar.start()
             start_time = time.time()
             steps = 1
+
+            if metal == 'cuda':
+                print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}")
 
             for timestep in range(timesteps_per_episode):
 
