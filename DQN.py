@@ -96,9 +96,6 @@ class Agent:
         for state, action, reward, next_state, terminated in minibatch:
             state = torch.from_numpy(state).float().to(self.device)
             next_state = torch.from_numpy(next_state).float().to(self.device)
-            action = torch.from_numpy(action).float().to(self.device)
-            reward = torch.from_numpy(reward).float().to(self.device)
-            terminated = torch.from_numpy(terminated).float().to(self.device)
         
             with torch.no_grad():
                 current_q_values = self.q_network(state).detach()
