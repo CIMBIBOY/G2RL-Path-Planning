@@ -36,8 +36,12 @@ def print_model_summary(model, input_size, batch_size):
     hooks = []
     module_idx = 0
 
+    # Get the device of the model
+    device = next(model.parameters()).device
+
     model.apply(register_hook)
-    model(torch.zeros(*input_size))
+    # Move the input tensor to the same device as the model
+    model(torch.zeros(*input_size).to(device))
 
     for h in hooks:
         h.remove()
