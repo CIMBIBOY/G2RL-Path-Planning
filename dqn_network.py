@@ -7,17 +7,23 @@ import time
 from eval import evaluate_performance
 import numpy as np
 
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 32):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 8, train_num = 1):
     
+
+    # Set the device to CUDA if available
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Currently running training on device: {device}")
+
+    # Initialize the agent with its network
+    agent = Agent(env, CNNLSTMModel(30,30,4,4).to(device), metal = metal)
+    agent.batch_size = batch_size
+    N = 100
+
     # Load model weights if provided
     if model_weights_path:
         agent.q_network.load_state_dict(torch.load(model_weights_path))
         print(f"Loaded model weights from: {model_weights_path}")
     
-    agent = Agent(env, CNNLSTMModel(30,30,4,4), metal = metal)
-    image = 0
-    N = 100
-
     print_model_summary(agent.q_network, (batch_size, 1, 30, 30, 4), batch_size)
 
     all_episode_rewards = []
@@ -28,8 +34,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
     try:        
         for e in range(num_episodes):
-
-            if num_episodes < 2: print(state.device)
             _, state = env.reset()
             episode_reward = 0
             episode_loss = 0
@@ -42,9 +46,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             start_time = time.time()
             steps = 1
 
-            if num_episodes < 2: 
-                print(f"Currently running train on device: {state.device}")
-            
             for timestep in range(timesteps_per_episode):
 
                 action = agent.act(state)
@@ -55,8 +56,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 if env.pygame_render:
                     env.render()
                 if save_images:
-                    env.render_video(5, image)
-                    image += 1
+                    env.render_video(5, timestep)
                 
                 if terminated:
                     # agent.align_target_model()
@@ -64,8 +64,8 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 
                 state = next_state
                     
-                if len(agent.expirience_replay) > batch_size:
-                    loss = agent.retrain(batch_size)
+                if len(agent.expirience_replay) > agent.batch_size:
+                    loss = agent.retrain()
                     episode_loss += loss
                     
                 episode_reward += reward
@@ -92,11 +92,11 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
             if (e + 1) % N == 0: 
                 batch_episode_time = batch_episode_time 
-                print(f"\n---------- 100 episode periods ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times\n")
-                batch_episode_time = batch_loss = batch_reward = 0
+                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n")
+                batch_episode_time = batch_loss = batch_reward = agent.rand_act = agent.netw_act = 0
                 
                 # Save the model weights
-                torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}.pth')  # For DQN
+                torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}_{train_num}.pth')  # For DQN
                 
         print(" ---------- Training Finished ----------")
 

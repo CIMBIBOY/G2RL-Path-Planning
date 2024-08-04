@@ -7,6 +7,7 @@ from utils import symmetric_pad_array
 import os
 import imageio
 import pygame
+from collections import deque
 
 def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
@@ -27,6 +28,10 @@ class WarehouseEnvironment:
         self.n_states = height * width
         # action space dim
         self.n_actions = len(self.action_space())
+        # Buffer to store past observations to store last 4 observations
+        self.observation_history = deque(maxlen=4)  
+        # Number of historical observations to use
+        self.Nt = 4 
         # Agent id
         self.agent_idx = agent_idx
         # Agent's path length 
@@ -166,12 +171,13 @@ class WarehouseEnvironment:
 
         self.agent_prev_coord = new_agent_coord
         if reached_goal == True:
-            self.arrived = self.arrived + 1
+            self.arrived += 1
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
             isAgentDone = True 
 
+        # TODO: env needs to account for past observations
         combined_arr = np.array([])
         if len(local_obs) > 0:
             self.scenes.append(Image.fromarray(local_obs, 'RGB'))

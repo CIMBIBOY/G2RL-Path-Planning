@@ -15,7 +15,8 @@ class Agent:
         self._action_space = enviroment.action_space()
         self._action_size = enviroment.n_actions
         # Experience replay pool
-        self.expirience_replay = deque(maxlen=4)
+        self.batch_size = 32
+        self.expirience_replay = deque(maxlen=10000)
         
         # Initialize discount and exploration rate
         self.gamma = 0.6
@@ -40,6 +41,10 @@ class Agent:
         
         # Initialize loss function
         self.criterion = nn.MSELoss()
+
+        # Track random and network actions
+        self.rand_act = 0
+        self.netw_act = 0
 
     def store(self, state, action, reward, next_state, terminated):
         # Store in experience replay pool
@@ -70,16 +75,18 @@ class Agent:
         # take action
         if np.random.rand() <= self.epsilon:
             action = random.choice(self._action_space)
+            self.rand_act += 1
             # print(f"random action: {action}")
             return action
         
         q_values = self.q_network.forward(state_tensor)
         m_action = np.argmax(q_values[0].detach().numpy())
+        self.netw_act += 1
         # print(f"model action: {m_action}")
         return m_action
 
-    def retrain(self, batch_size):
-        minibatch = random.sample(self.expirience_replay, batch_size)
+    def retrain(self):
+        minibatch = random.sample(self.expirience_replay, self.batch_size)
         
         total_loss = 0.0
         
@@ -116,4 +123,4 @@ class Agent:
 
         self.scheduler.step()
         
-        return total_loss 
+        return total_loss / self.batch_size

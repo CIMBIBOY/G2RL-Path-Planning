@@ -8,3 +8,5 @@ g2rl/
 models/
 weights/dqn_model_cpu.pth
 weights/dqn_model_cuda.pth
+weights/dqn_model_cpu_2.pth
+weights/dqn_model_cuda_2.pth

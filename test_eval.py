@@ -3,6 +3,7 @@ from WarehouseEnv import WarehouseEnvironment
 from eval import evaluate_performance
 from DQN import Agent
 from cnn import CNNLSTMModel
+import torch
 
 def get_dimensions(nested_list):
     if isinstance(nested_list, list):
@@ -43,9 +44,16 @@ if __name__ == '__main__':
         # Set up the agent
         state_size = env.n_states
         action_size = env.n_actions
-        model = CNNLSTMModel(30, 30, 4, 4)  # Adjust these parameters if needed
-        agent = Agent(env, model)
-        print("Agent created")
+        if torch.cuda.is_available(): metal = 'cuda'
+        else: metal = 'cpu'
+        # Init agent with network
+        agent = Agent(env, CNNLSTMModel(30,30,4,4), metal = metal)
+        model_weights_path = './weights/dqn_model_cpu.pth'
+        # Load model weights if provided
+        if model_weights_path:
+            agent.q_network.load_state_dict(torch.load(model_weights_path))
+            print(f"Loaded model weights from: {model_weights_path}")
+            print("Agent created")
 
         # Optionally, load a pre-trained model
         # model_path = "path_to_your_model.pth"
