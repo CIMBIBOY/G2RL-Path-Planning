@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import StepLR
 from PER import PrioritizedReplayBuffer
 
 class Agent:
-    def __init__(self, enviroment, model, total_training_steps = 200000, metal = 'cuda'):
+    def __init__(self, enviroment, model, total_training_steps = 180000, metal = 'cuda'):
         
         # The number of states is the number of cells in the environment
         self._state_size = enviroment.n_states
