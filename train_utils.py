@@ -1,6 +1,7 @@
 import torch
 import random
 import numpy as np
+import time
 
 # Function to set the seed for reproducibility
 def set_seed(seed):
@@ -22,3 +23,14 @@ def print_cuda_info():
         print(f"CUDA device name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
     else:
         print("CUDA is not available.")
+
+# Functions for debugging computation time
+def debug_start(timestep = 0, str = 'a'):
+    print(f"At timestep: {timestep} form debug operation num: {str}")
+    start_time = time.time()
+    return start_time
+
+def debug_end(stime):
+    end_time = time.time()
+    operation_time = end_time - stime
+    if operation_time > 0.1: print(f"Operation took {operation_time} s to complete")

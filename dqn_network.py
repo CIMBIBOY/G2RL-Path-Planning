@@ -6,7 +6,9 @@ import progressbar
 import time
 from eval import evaluate_performance
 import numpy as np
+from train_utils import debug_start, debug_end
 
+# DQN training script
 def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 8, train_name = 'train', cmd_log = 5):
     # Set the device to CUDA if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -39,6 +41,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
     batch_start_time = time.time()
     start_time = time.time()
     condition = False
+    bar_bool = False
 
     try:        
         for e in range(num_episodes):
@@ -56,7 +59,8 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 condition = True 
 
             timesteps_per_episode =  3 * env.agent_path_len
-            if e == 0 or e + 1 % cmd_print == 0:
+
+            if (e == 0 or e + 1 % cmd_print == 0) and bar_bool:
                 bar = progressbar.ProgressBar(maxval=cmd_print * timesteps_per_episode, 
                                     widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
                 bar.start()
@@ -65,9 +69,9 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
             for timestep in range(timesteps_per_episode):
                 action = agent.act(state)
-                next_state, _, reward, terminated = env.step(action) 
-                agent.store(state, action, reward, next_state, terminated)
-
+                next_state, _, reward, terminated = env.step(action)
+                if state.shape != (1, 1, 30, 30, 4): 
+                    agent.store(state, action, reward, next_state, terminated)
                 # Check for rendering toggle
                 if env.pygame_render:
                     env.render()
@@ -75,22 +79,25 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                     env.render_video(5, timestep)
                 
                 if terminated:
-                    # agent.align_target_model()
+                    agent.align_target_model()
                     break
                 
                 state = next_state
                     
+                # stime = debug_start(timestep, 'retrain')
                 if len(agent.expirience_replay) > agent.batch_size:
                     loss = agent.retrain()
                     episode_loss += loss
+                # debug_end(stime)
                     
                 episode_reward += reward
 
-                # Update progress bar
-                bar_steps += 1
-                batch_steps += 1
-                if e % cmd_print < cmd_print - 1 or timestep == timesteps_per_episode - 1:
-                    bar.update(bar_steps)
+                if bar_bool:
+                    # Update progress bar
+                    bar_steps += 1
+                    batch_steps += 1
+                    if e % cmd_print < cmd_print - 1 or timestep == timesteps_per_episode - 1:
+                        bar.update(bar_steps)
         
                 steps += 1
 
@@ -104,7 +111,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             if (e + 1) % cmd_print == 0:
                 end_time = time.time()
                 computing_time = (end_time - start_time) / steps
-                bar.finish()
+                if bar_bool: bar.finish()
                 print(f" Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/step")
                 # Reset and restart progress bar
                 bar_steps = 0

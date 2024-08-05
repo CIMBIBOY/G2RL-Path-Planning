@@ -25,10 +25,7 @@ class CNNLSTMModel(nn.Module):
         lstm_input_size = 128 * conv3_out[0] * conv3_out[1]
 
         # Dropout in LSTM layer (only for stacked LSTMs)
-        self.lstm = nn.LSTM(input_size=lstm_input_size, hidden_size=self.hiddens, batch_first=True, dropout=dropout_rate)
-        
-        # Dropout after LSTM
-        self.lstm_dropout = nn.Dropout(dropout_rate)
+        self.lstm = nn.LSTM(input_size=lstm_input_size, hidden_size=self.hiddens, batch_first=True)
 
         self.dense_1 = nn.Linear(512, 512)
         self.dense_dropout = nn.Dropout(dropout_rate)
@@ -58,9 +55,6 @@ class CNNLSTMModel(nn.Module):
 
         # LSTM layer
         lstm_out, _ = self.lstm(x)
-        
-        # Apply dropout after LSTM
-        lstm_out = self.lstm_dropout(lstm_out)
 
         # We only need the last output from LSTM
         lstm_out = lstm_out[:, -1, :]

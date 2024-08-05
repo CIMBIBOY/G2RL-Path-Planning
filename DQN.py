@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
+from PER import PrioritizedReplayBuffer
 
 class Agent:
     def __init__(self, enviroment, model, total_training_steps = 200000, metal = 'cuda'):
@@ -16,7 +17,7 @@ class Agent:
         self._action_size = enviroment.n_actions
         # Experience replay pool
         self.batch_size = 32
-        self.expirience_replay = deque(maxlen=10000)
+        self.expirience_replay = PrioritizedReplayBuffer(capacity=10000)
         
         # Initialize discount and exploration rate
         self.gamma = 0.6
@@ -48,8 +49,9 @@ class Agent:
 
     def store(self, state, action, reward, next_state, terminated):
         # Store in experience replay pool
-        self.expirience_replay.append((state, action, reward, next_state, terminated))
-    
+        experience = (state, action, reward, next_state, terminated)
+        self.expirience_replay.add(experience)
+
     def _build_compile_model(self):
         # Build initialization network model
         model = CNNLSTMModel(48,48,4,4)
@@ -87,41 +89,38 @@ class Agent:
         return m_action
 
     def retrain(self):
-        minibatch = random.sample(self.expirience_replay, self.batch_size)
-        
-        total_loss = 0.0
-        
-        self.optimizer.zero_grad()  # Move this outside the loop
+        states, actions, rewards, next_states, dones, indices, weights = self.expirience_replay.sample(self.batch_size)
 
-        for state, action, reward, next_state, terminated in minibatch:
-            state = torch.from_numpy(state).float().to(self.device)
-            next_state = torch.from_numpy(next_state).float().to(self.device)
-        
-            with torch.no_grad():
-                current_q_values = self.q_network(state).detach()
-            
-            with torch.no_grad():
-                if not terminated:
-                    next_q_values = self.target_network(next_state)
-                    target_q_value = reward + self.gamma * torch.max(next_q_values).item()
-                else:
-                    target_q_value = reward
-            
-            target = current_q_values.clone()
-            target[0][action] = target_q_value
-            
-            current_q_values = self.q_network(state)  # Recompute with grad
-            loss = self.criterion(current_q_values, target)
-            loss.backward()
-            
-            total_loss += loss.item()
+        states = torch.from_numpy(np.array(states)).float().to(self.device)
+        next_states = torch.from_numpy(np.array(next_states)).float().to(self.device)
+        actions = torch.from_numpy(np.array(actions)).long().to(self.device)
+        rewards = torch.from_numpy(np.array(rewards)).float().to(self.device)
+        dones = torch.from_numpy(np.array(dones)).bool().to(self.device)
+        weights = torch.from_numpy(np.array(weights)).float().to(self.device)
+
+        states = states.squeeze(1)  # Remove the unnecessary dimension
+        next_states = next_states.squeeze(1)
+
+        self.optimizer.zero_grad()
+
+        current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1))
+
+        with torch.no_grad():
+            next_q_values = self.target_network(next_states)
+            max_next_q_values = torch.max(next_q_values, dim=1)[0]
+            # Bellman Equation
+            target_q_values = rewards + self.gamma * max_next_q_values * (~dones)
+
+        loss = (weights * self.criterion(current_q_values, target_q_values.unsqueeze(1))).mean()
+        loss.backward()
 
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), max_norm=1.0)
-        
-        self.optimizer.step()
-        
-        self.align_target_model()  # Move this outside the loop
 
+        self.optimizer.step()
         self.scheduler.step()
-        
-        return total_loss / self.batch_size
+
+        # Update priorities
+        errors = torch.abs(target_q_values.unsqueeze(1) - current_q_values).cpu().detach().numpy()
+        self.expirience_replay.update_priorities(indices, errors)
+
+        return loss.item()
