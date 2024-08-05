@@ -3,10 +3,8 @@ import time
 from map_generator import map_to_value
 from global_mapper import find_path, return_path
 import os
-
-import numpy as np
+import random
 import matplotlib.pyplot as plt
-import os
 
 def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode, eval_folder='G2RL-Path-Planning/eval_images'):
     """
@@ -109,7 +107,8 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         start_time = time.time()
 
         while not done:
-            action = agent.act(state)
+            if steps < 5: action = random.choice(agent._action_space)
+            else: action = agent.act(state)
             step_result = env.step(action)
 
             # Ensure step_result has 4 values

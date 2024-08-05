@@ -48,7 +48,7 @@ if __name__ == '__main__':
         else: metal = 'cpu'
         # Init agent with network
         agent = Agent(env, CNNLSTMModel(30,30,4,4), metal = metal)
-        model_weights_path = './weights/dqn_model_cpu.pth'
+        model_weights_path = './weights/dqn_model_cuda_czm_1.pth'
         # Load model weights if provided
         if model_weights_path:
             agent.q_network.load_state_dict(torch.load(model_weights_path))

@@ -4,9 +4,12 @@ import torch.nn as nn
 class CNNLSTMModel(nn.Module):
     def __init__(self, height, width, depth, nt):
         super(CNNLSTMModel, self).__init__()
-        self.conv3d_1 = nn.Conv3d(nt, 32, (1, 3, 3))
+        self.conv3d_1 = nn.Conv3d(4, 32, (1, 3, 3))  # Input channels should be 4
+        self.bn1 = nn.BatchNorm3d(32)
         self.conv3d_2 = nn.Conv3d(32, 64, (1, 1, 1))
+        self.bn2 = nn.BatchNorm3d(64)
         self.conv3d_3 = nn.Conv3d(64, 128, (1, 2, 2))
+        self.bn3 = nn.BatchNorm3d(128)
         self.relu = nn.ReLU()
 
         self.flatten = nn.Flatten()
@@ -27,13 +30,16 @@ class CNNLSTMModel(nn.Module):
         x = x.float()
         # print(f"input state shape: {x.shape}")
 
+        # Input shape: (batch_size, nt, height, width, channels)
         batch_size, nt, height, width, channels = x.shape
-        x = x.view(batch_size * nt, channels, height, width)
+        
+        # Reshape to (batch_size * nt, channels, 1, height, width)
+        x = x.view(batch_size * nt, channels, 1, height, width)
 
         # Convolutional layers
-        x = self.relu(self.conv3d_1(x.unsqueeze(2)))  # Add a temporal dimension for 3D convolution
-        x = self.relu(self.conv3d_2(x))
-        x = self.relu(self.conv3d_3(x))
+        x = self.relu(self.bn1(self.conv3d_1(x)))
+        x = self.relu(self.bn2(self.conv3d_2(x)))
+        x = self.relu(self.bn3(self.conv3d_3(x)))
         
         # Flatten and reshape for LSTM
         x = self.flatten(x)
