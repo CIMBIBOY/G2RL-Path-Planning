@@ -17,10 +17,15 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
     agent.batch_size = batch_size
     N = 100
 
-    # Load model weights if provided
+   # Load model weights if provided
     if model_weights_path:
-        agent.q_network.load_state_dict(torch.load(model_weights_path))
-        print(f"Loaded model weights from: {model_weights_path}")
+        try:
+            agent.q_network.load_state_dict(torch.load(model_weights_path, map_location=device))
+            print(f"Loaded model weights from: {model_weights_path}")
+            time.sleep(2)
+        except Exception as e:
+            print(f"Error loading model weights: {e}")
+            time.sleep(2)
     
     print_model_summary(agent.q_network, (batch_size, 4, 30, 30, 4), batch_size)
 
