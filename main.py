@@ -53,7 +53,7 @@ if __name__ == '__main__':
         model_weights_path = args.model_weights
 
     if args.method == 'dqn':
-        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video, batch_size=batch, train_name=train_name, cmd_log=cmd_log)
+        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video, metal=metal, model_weights_path=model_weights_path, batch_size=batch, train_name=train_name, cmd_log=cmd_log)
     elif args.method == 'qnet':
         q_learning_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video)   
     else: print("No method choosen or type error in parsing argument! Please eaither use command: \npython main.py --method dqn \nor\n python main.py --method qnet")
