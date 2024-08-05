@@ -105,7 +105,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 end_time = time.time()
                 computing_time = (end_time - start_time) / steps
                 bar.finish()
-                print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/step")
+                print(f" Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/step")
                 # Reset and restart progress bar
                 bar_steps = 0
                 start_time = time.time()
