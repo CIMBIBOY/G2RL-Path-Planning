@@ -63,9 +63,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             
             steps = 1
 
-            if metal == 'cuda':
-                print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}")
-
             for timestep in range(timesteps_per_episode):
                 action = agent.act(state)
                 next_state, _, reward, terminated = env.step(action) 
@@ -117,7 +114,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / batch_steps
                 print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {batch_computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n\n")
-                print(f"Currently running training on device: {device}\n")
+                print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}")
                 batch_steps = batch_loss = batch_reward = agent.rand_act = agent.netw_act = 0
                 batch_start_time = time.time()
                 
