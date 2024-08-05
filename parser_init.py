@@ -23,3 +23,5 @@ def init_parser(self):
                     help='Specifiy the name of the current train')
     self.add_argument('--cmd_log', type=int, default=5, 
                     help='Set command line log frequency')
+    self.add_argument('--explore', type=int, default=200000, 
+                    help='Set exploration steps for e-greedy decay')
