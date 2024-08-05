@@ -20,7 +20,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
    # Load model weights if provided
     if model_weights_path:
         try:
-            agent.q_network.load_state_dict(torch.load(model_weights_path, map_location=device))
+            agent.q_network.load_state_dict(torch.load(model_weights_path, map_location=device, weights_only=True))
             print(f"Loaded model weights from: {model_weights_path}")
             time.sleep(2)
         except Exception as e:
@@ -119,7 +119,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 batch_start_time = time.time()
                 
                 # Save the model weights
-                
                 torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}_{train_name}.pth')  # For DQN
                 
         print(" ---------- Training Finished ----------")
