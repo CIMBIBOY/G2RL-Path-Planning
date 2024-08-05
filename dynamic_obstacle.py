@@ -70,7 +70,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     if (h_new, w_new) == (agent_goal[0], agent_goal[1]):
         print(f"Agent Reached Goal: {agent_goal}")
         agentDone = True
-        inst_arr[h_new, w_new] = [0, 255, 0]  # mark goal cell as green
+        inst_arr[h_new, w_new] = [0, 200, 0]  # mark goal cell as green
         arrived = True
 
     # Check for out of bounds or collisions with obstacles

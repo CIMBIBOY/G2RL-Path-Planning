@@ -53,14 +53,25 @@ def print_model_summary(model, input_size, batch_size):
     total_output = 0
     trainable_params = 0
     for layer in summary:
-        line_new = f'{layer:<25} {str(summary[layer]["output_shape"]):<20} {summary[layer]["nb_params"]:<10}'
+        # Convert output shape to string, handling 'multiple_outputs' case
+        if isinstance(summary[layer]["output_shape"], list) and summary[layer]["output_shape"][0] == 'multiple_outputs':
+            output_shape_str = str(summary[layer]["output_shape"])
+        else:
+            output_shape_str = str(summary[layer]["output_shape"])
+        
+        line_new = f'{layer:<25} {output_shape_str:<20} {summary[layer]["nb_params"]:<10}'
         total_params += summary[layer]['nb_params']
         if summary[layer]['output_shape'] != 'multiple_outputs':
-            product = 1
-            for dim in summary[layer]['output_shape']:
-                if isinstance(dim, int):
-                    product *= dim
-            total_output += product
+            if isinstance(summary[layer]['output_shape'], list):
+                int_dims = [dim for dim in summary[layer]['output_shape'] if isinstance(dim, int)]
+                if int_dims:
+                    product = reduce(lambda x, y: x * y, int_dims)
+                    total_output += product
+            else:
+                int_dims = [dim for dim in summary[layer]['output_shape'] if isinstance(dim, int)]
+                if int_dims:
+                    product = reduce(lambda x, y: x * y, int_dims)
+                    total_output += product
         if 'trainable' in summary[layer]:
             if summary[layer]['trainable']:
                 trainable_params += summary[layer]['nb_params']
@@ -71,4 +82,3 @@ def print_model_summary(model, input_size, batch_size):
     print(f'Trainable params: {trainable_params}')
     print(f'Non-trainable params: {total_params - trainable_params}')
     print('-------------------------------------------------------')
-

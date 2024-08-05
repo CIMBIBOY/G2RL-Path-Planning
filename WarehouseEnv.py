@@ -28,10 +28,11 @@ class WarehouseEnvironment:
         self.n_states = height * width
         # action space dim
         self.n_actions = len(self.action_space())
-        # Buffer to store past observations to store last 4 observations
-        self.observation_history = deque(maxlen=4)  
         # Number of historical observations to use
         self.Nt = 4 
+        self.initial_random_steps = 0
+        # Buffer to store past observations to store last 4 observations
+        self.observation_history = deque(maxlen=self.Nt)
         # Agent id
         self.agent_idx = agent_idx
         # Agent's path length 
@@ -84,9 +85,11 @@ class WarehouseEnvironment:
         start = reset_state[0]
         end = reset_state[-1]
         self.dist = manhattan_distance(start[0], start[1], end[0], end[1])
-        
+
         self.agent_path = self.agents_paths[self.agent_idx]
-        graphical_state, _, _, _ = self.step(4)
+
+        # Take initial step to get the first real observation
+        graphical_state, _, _, _ = self.step(4)  # Assuming 4 is a valid initial action
 
         # Increment the episode count
         self.episode_count += 1
@@ -100,6 +103,76 @@ class WarehouseEnvironment:
             self.agent_path = self.agents_paths[self.agent_idx]
 
         return start[0] * start[1], graphical_state
+    
+
+    def get_stacked_state(self):
+        # Ensure we have exactly Nt observations
+        assert len(self.observation_history) == self.Nt, f"Expected {self.Nt} observations, but got {len(self.observation_history)}"
+        
+        # Stack the observations along the second axis (axis=1)
+        stacked_state = np.concatenate(list(self.observation_history), axis=1)
+
+        return stacked_state
+    
+
+    def step(self, action):
+        if len(self.init_arr) == 0:
+            print("Run env.reset() first")
+            return None, None, None, False
+
+        self.time_idx += 1
+        conv, x, y = self.action_dict[action]
+        # print(f'Action taken: {conv}')
+        
+        target_array = (2*self.local_fov, 2*self.local_fov, 4)
+
+        agent_goal = self.agent_path[-1]  # Get the goal from the agent's path
+        self.agent_path_len = len(self.agent_path)
+        
+        # Update coordinates 
+        local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
+        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords, reached_goal = \
+        update_coords(
+            self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
+            self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
+            self.cells_skipped, self.dist, agent_goal
+        )
+
+        self.agent_prev_coord = new_agent_coord
+        if reached_goal == True:
+            self.arrived += 1
+
+        # Check if there's global guidance in the local FOV
+        if not self.has_global_guidance():
+            isAgentDone = True 
+
+        combined_arr = np.array([])
+        if len(local_obs) > 0:
+            self.scenes.append(Image.fromarray(local_obs, 'RGB'))
+            local_map = local_map.reshape(local_map.shape[0],local_map.shape[1],1)
+            combined_arr = np.dstack((local_obs, local_map))
+            combined_arr = symmetric_pad_array(combined_arr, target_array, 255)
+            combined_arr = combined_arr.reshape(1,1,combined_arr.shape[0], combined_arr.shape[1], combined_arr.shape[2])
+        
+        if len(combined_arr) > 0:
+            if len(self.observation_history) < self.Nt:
+                self.observation_history.append(combined_arr)
+                self.initial_random_steps += 1
+            else:
+                # Remove the oldest observation and add the new one
+                self.observation_history.popleft()
+                self.observation_history.append(combined_arr)
+
+        if self.initial_random_steps < self.Nt:
+            # Return the single observation during initial steps
+            return_values = (combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone)
+        else:
+            # Return the stacked state after we have enough observations
+            stacked_state = self.get_stacked_state()
+            return_values = (stacked_state, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone)
+        
+        return return_values
+    
     
     def generate_end_points_and_paths(self):
         """
@@ -144,55 +217,11 @@ class WarehouseEnvironment:
         has_guidance = np.any(local_guidance < 255)
         
         return has_guidance
-
-
-    def step(self, action):
-        if len(self.init_arr) == 0:
-            print("Run env.reset() first")
-            return None, None, None, False
-
-        self.time_idx += 1
-        conv, x, y = self.action_dict[action]
-        # print(f'Action taken: {conv}')
-        
-        target_array = (2*self.local_fov, 2*self.local_fov, 4)
-
-        agent_goal = self.agent_path[-1]  # Get the goal from the agent's path
-        self.agent_path_len = len(self.agent_path)
-        
-        # Update coordinates 
-        local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords, reached_goal = \
-        update_coords(
-            self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
-            self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, agent_goal
-        )
-
-        self.agent_prev_coord = new_agent_coord
-        if reached_goal == True:
-            self.arrived += 1
-
-        # Check if there's global guidance in the local FOV
-        if not self.has_global_guidance():
-            isAgentDone = True 
-
-        # TODO: env needs to account for past observations
-        combined_arr = np.array([])
-        if len(local_obs) > 0:
-            self.scenes.append(Image.fromarray(local_obs, 'RGB'))
-            local_map = local_map.reshape(local_map.shape[0],local_map.shape[1],1)
-            combined_arr = np.dstack((local_obs, local_map))
-            combined_arr = symmetric_pad_array(combined_arr, target_array, 255)
-            combined_arr = combined_arr.reshape(1,1,combined_arr.shape[0], combined_arr.shape[1], combined_arr.shape[2])
-        
-        return_values = (combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone)
-        # print(f"Returning from step: {return_values}")
-        return return_values
     
 
     def render_video(self, train_index, image_index):
         assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
+        # Get the most recent observation (last channel of the stacked state)
         img = Image.fromarray(self.init_arr, 'RGB')
 
         # Ensure the base directory 'training_images' exists

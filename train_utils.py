@@ -12,8 +12,8 @@ def set_seed(seed):
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
     # Ensures deterministic behavior in CUDA (optional but useful for debugging)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = False
 
 def print_cuda_info():
     if torch.cuda.is_available():

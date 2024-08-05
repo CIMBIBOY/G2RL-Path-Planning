@@ -6,9 +6,9 @@ from q_learning import q_learning_training
 from parser_init import init_parser
 
 '''
-python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train scratch --batch 512 --train_num 2
+python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cpu --train scratch --batch 32 --train_name czm --cmd_log 3
 
-python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train retrain --model_weights G2RL-Path-Planning/weights/dqn_model_cpu.pth --batch 512
+python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train retrain --model_weights G2RL-Path-Planning/weights/dqn_model_cpu.pth --batch 32 --train_name czm_1 --cmd_log 5
 
 --model_weights models/dqn_model.pth
 '''
@@ -24,24 +24,19 @@ if __name__ == '__main__':
     num_ep = args.epochs
     num_timesteps = args.timesteps
     batch = args.batch
-    train_num = args.train_num
+    train_name = args.train_name
+    cmd_log = args.cmd_log
 
     if args.render == 'all': video = True
     else: video = False
 
     if args.render == 'pygame':
         env = WarehouseEnvironment(pygame_render=True)
-        _, state = env.reset() # image of first reset
-        print(f"Input tensor dimension (state.shape): {state.shape}")
     elif args.render == 'off':
         env = WarehouseEnvironment(pygame_render=False)
-        _, state = env.reset() # image of first reset
-        print(f"Input tensor dimension (state.shape): {state.shape}")
     else:
         print("Render automatically set to False!")
         env = WarehouseEnvironment(pygame_render=False)
-        _, state = env.reset() # image of first reset
-        print(f"Input tensor dimension (state.shape): {state.shape}")
 
     if args.metal == 'cuda':
         metal = 'cuda'
@@ -58,7 +53,7 @@ if __name__ == '__main__':
         model_weights_path = args.model_weights
 
     if args.method == 'dqn':
-        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video, batch_size=batch, train_num=train_num)
+        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video, batch_size=batch, train_name=train_name, cmd_log=cmd_log)
     elif args.method == 'qnet':
         q_learning_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video)   
     else: print("No method choosen or type error in parsing argument! Please eaither use command: \npython main.py --method dqn \nor\n python main.py --method qnet")

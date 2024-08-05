@@ -7,7 +7,7 @@ import time
 from eval import evaluate_performance
 import numpy as np
 
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 8, train_num = 1):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 8, train_name = 'train', cmd_log = 5):
     # Set the device to CUDA if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Currently running training on device: {device}")
@@ -22,7 +22,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
         agent.q_network.load_state_dict(torch.load(model_weights_path))
         print(f"Loaded model weights from: {model_weights_path}")
     
-    print_model_summary(agent.q_network, (batch_size, 1, 30, 30, 4), batch_size)
+    print_model_summary(agent.q_network, (batch_size, 4, 30, 30, 4), batch_size)
 
     all_episode_rewards = []
     all_episode_losses = []
@@ -30,8 +30,10 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
     batch_reward = 0
     bar_steps = 0
     batch_steps = 0
+    cmd_print = cmd_log
     batch_start_time = time.time()
     start_time = time.time()
+    condition = False
 
     try:        
         for e in range(num_episodes):
@@ -40,11 +42,17 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             episode_loss = 0
             terminated = False
 
-            if e == 0: print(" ---------- Training Started ----------")
+            if e == 0: 
+                print(f"Input tensor dimension (state.shape): {state.shape}")
+                print(" ---------- Training Started ----------")
+
+            if env.initial_random_steps == env.Nt and not condition:
+                print(f" Input tensor dimension (state.shape) reached 3 past and 1 present observation: {state.shape}")
+                condition = True 
 
             timesteps_per_episode =  3 * env.agent_path_len
-            if e == 0 or e + 1 % 10 == 0:
-                bar = progressbar.ProgressBar(maxval=10 * timesteps_per_episode, 
+            if e == 0 or e + 1 % cmd_print == 0:
+                bar = progressbar.ProgressBar(maxval=cmd_print * timesteps_per_episode, 
                                     widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
                 bar.start()
             
@@ -54,7 +62,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}")
 
             for timestep in range(timesteps_per_episode):
-
                 action = agent.act(state)
                 next_state, _, reward, terminated = env.step(action) 
                 agent.store(state, action, reward, next_state, terminated)
@@ -80,7 +87,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 # Update progress bar
                 bar_steps += 1
                 batch_steps += 1
-                if e % 10 < 10 - 1 or timestep == timesteps_per_episode - 1:
+                if e % cmd_print < cmd_print - 1 or timestep == timesteps_per_episode - 1:
                     bar.update(bar_steps)
         
                 steps += 1
@@ -92,12 +99,12 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             all_episode_rewards.append(episode_reward)
             all_episode_losses.append(episode_loss)
 
-            if (e + 1) % 10 == 0:
+            if (e + 1) % cmd_print == 0:
                 end_time = time.time()
                 computing_time = (end_time - start_time) / steps
+                bar.finish()
                 print(f"Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/step")
                 # Reset and restart progress bar
-                bar.finish()
                 bar_steps = 0
                 start_time = time.time()
 
@@ -109,7 +116,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 batch_start_time = time.time()
                 
                 # Save the model weights
-                torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}_{train_num}.pth')  # For DQN
+                torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}_{train_name}.pth')  # For DQN
                 
         print(" ---------- Training Finished ----------")
 

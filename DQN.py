@@ -73,7 +73,7 @@ class Agent:
             epsilon_final = True
 
         # take action
-        if np.random.rand() <= self.epsilon:
+        if np.random.rand() <= self.epsilon or self.current_step < 4:
             action = random.choice(self._action_space)
             self.rand_act += 1
             # print(f"random action: {action}")
