@@ -8,7 +8,7 @@ from parser_init import init_parser
 '''
 python3 main.py --render pygame --method dqn --epochs 100000 --timesteps 33 --metal cpu --train scratch --batch 32 --train_name czm --cmd_log 3
 
-python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train retrain --model_weights weights/dqn_model_cpu_2.pth --batch 32 --train_name czm_1 --cmd_log 5
+python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train retrain --model_weights weights/dqn_model_cuda_czm_1.pth --batch 32 --train_name czm_1 --cmd_log 5
 
 python3 main.py --render off --method dqn --epochs 100000 --timesteps 33 --metal cuda --train scratch --batch 32 --train_name czm_1 --cmd_log 5
 '''

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class CNNLSTMModel(nn.Module):
-    def __init__(self, height, width, depth, nt):
+    def __init__(self, height, width, depth, nt, dropout_rate=0.3):
         super(CNNLSTMModel, self).__init__()
         self.conv3d_1 = nn.Conv3d(4, 32, (1, 3, 3))  # Input channels should be 4
         self.bn1 = nn.BatchNorm3d(32)
@@ -11,6 +11,9 @@ class CNNLSTMModel(nn.Module):
         self.conv3d_3 = nn.Conv3d(64, 128, (1, 2, 2))
         self.bn3 = nn.BatchNorm3d(128)
         self.relu = nn.ReLU()
+
+        # Dropout layer after convolutional layers
+        self.conv_dropout = nn.Dropout3d(dropout_rate)
 
         self.flatten = nn.Flatten()
         self.hiddens = 512
@@ -21,14 +24,19 @@ class CNNLSTMModel(nn.Module):
         conv3_out = (conv2_out[0] - 1, conv2_out[1] - 1)
         lstm_input_size = 128 * conv3_out[0] * conv3_out[1]
 
-        self.lstm = nn.LSTM(input_size=lstm_input_size, hidden_size=self.hiddens, batch_first=True)
+        # Dropout in LSTM layer (only for stacked LSTMs)
+        self.lstm = nn.LSTM(input_size=lstm_input_size, hidden_size=self.hiddens, batch_first=True, dropout=dropout_rate)
+        
+        # Dropout after LSTM
+        self.lstm_dropout = nn.Dropout(dropout_rate)
+
         self.dense_1 = nn.Linear(512, 512)
+        self.dense_dropout = nn.Dropout(dropout_rate)
         self.dense_2 = nn.Linear(512, 5)
 
     def forward(self, x):
         # Ensure input is float32
         x = x.float()
-        # print(f"input state shape: {x.shape}")
 
         # Input shape: (batch_size, nt, height, width, channels)
         batch_size, nt, height, width, channels = x.shape
@@ -41,6 +49,9 @@ class CNNLSTMModel(nn.Module):
         x = self.relu(self.bn2(self.conv3d_2(x)))
         x = self.relu(self.bn3(self.conv3d_3(x)))
         
+        # Apply dropout after convolutions
+        x = self.conv_dropout(x)
+        
         # Flatten and reshape for LSTM
         x = self.flatten(x)
         x = x.view(batch_size, nt, -1)
@@ -48,12 +59,16 @@ class CNNLSTMModel(nn.Module):
         # LSTM layer
         lstm_out, _ = self.lstm(x)
         
+        # Apply dropout after LSTM
+        lstm_out = self.lstm_dropout(lstm_out)
+
         # We only need the last output from LSTM
         lstm_out = lstm_out[:, -1, :]
         
-        # Dense layers
+        # Dense layers with dropout
         x = self.dense_1(lstm_out)
         x = torch.relu(x)
+        x = self.dense_dropout(x)
         x = self.dense_2(x)
         
         return x
