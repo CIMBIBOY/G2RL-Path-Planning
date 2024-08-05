@@ -111,11 +111,13 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             if (e + 1) % N == 0: 
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / batch_steps
-                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {batch_computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n")
+                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {batch_computing_time:.2f} sec/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n\n")
+                print(f"Currently running training on device: {device}\n")
                 batch_steps = batch_loss = batch_reward = agent.rand_act = agent.netw_act = 0
                 batch_start_time = time.time()
                 
                 # Save the model weights
+                
                 torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}_{train_name}.pth')  # For DQN
                 
         print(" ---------- Training Finished ----------")
