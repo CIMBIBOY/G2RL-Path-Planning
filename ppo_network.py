@@ -105,7 +105,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 print(f"Entropy: {logs['entropy']:.4f}")
                 print(f"KL Divergence: {logs['approx_kl_div']:.4f}\n")
 
-            if (e + 1) % 100 == 0:
+            if (e + 1) % 102 == 0:
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
                 # Save the model weights every 100 episodes
