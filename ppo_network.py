@@ -96,7 +96,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 computing_time = (end_time - start_time)
                 steps = 0
                 if bar_bool: bar.finish()
-                print(f" Episode: {e + 1}, Reward: {episode_reward:.2f}, Computing time: {computing_time:.4f} s/{cmd_log} epochs\n")
+                print(f" -------------------- Episode: {e + 1} -------------------- \nReward: {episode_reward:.2f}, Computing time: {computing_time:.4f} s/{cmd_log} epochs")
                 start_time = time.time()
                 # Log ppo data
                 logs = agent.get_logs()
@@ -109,7 +109,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
                 # Save the model weights every 100 episodes
-                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times\n")
+                print(f"\n-------------------- {e+1}'th episode --------------------\n Reward: {batch_reward:.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times")
                 torch.save(agent.model.state_dict(), f'./weights/ppo_model_{device}_{train_name}.pth')
                 # Log ppo data
                 logs = agent.get_logs()
