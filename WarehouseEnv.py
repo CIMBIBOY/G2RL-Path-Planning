@@ -8,6 +8,7 @@ import os
 import imageio
 import pygame
 from collections import deque
+import torch
 
 def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
@@ -23,6 +24,7 @@ class WarehouseEnvironment:
         # Convert png image to array, three layers of RGB
         self.map_img_arr = np.asarray(Image.open(self.map_path))
         # map size
+        self.height = height
         self.width = width
         # state space dimension
         self.n_states = height * width
@@ -172,6 +174,37 @@ class WarehouseEnvironment:
             return_values = (stacked_state, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone)
         
         return return_values
+    
+    def get_action_mask(self, device):
+        """Return a mask of valid actions, where 1 indicates a valid action and 0 indicates an invalid action."""
+        mask = np.ones(len(self.action_dict), dtype=np.float32)
+
+        # Get the current position of the agent
+        agent_position = self.agent_prev_coord
+        h, w = agent_position
+
+        # Check each possible action and set mask to 0 for invalid actions
+        if h <= 0 or not self.is_position_valid(h - 1, w):  # up
+            mask[0] = 0
+        if h >= self.height - 1 or not self.is_position_valid(h + 1, w):  # down
+            mask[1] = 0
+        if w <= 0 or not self.is_position_valid(h, w - 1):  # left
+            mask[2] = 0
+        if w >= self.width - 1 or not self.is_position_valid(h, w + 1):  # right
+            mask[3] = 0
+
+        # Idle action is always valid
+        mask[4] = 1
+
+        return torch.tensor(mask, device=device)
+
+    def is_position_valid(self, h, w):
+        # Define what makes a position invalid
+        if (self.init_arr[h, w] == [255, 165, 0]).all():  # Dynamic obstacle
+            return False
+        if (self.init_arr[h, w] == [0, 0, 0]).all():  # Static obstacle
+            return False
+        return True
     
     
     def generate_end_points_and_paths(self):

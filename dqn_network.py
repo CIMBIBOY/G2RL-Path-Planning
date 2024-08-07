@@ -40,8 +40,9 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
     cmd_print = cmd_log
     batch_start_time = time.time()
     start_time = time.time()
-    condition = False
     bar_bool = False
+    steps = 0
+    render = 0
 
     try:        
         for e in range(num_episodes):
@@ -54,10 +55,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 print(f"Input tensor dimension (state.shape): {state.shape}")
                 print(" ---------- Training Started ----------")
 
-            if env.initial_random_steps == env.Nt and not condition:
-                print(f" Input tensor dimension (state.shape) reached 3 past and 1 present observation: {state.shape}")
-                condition = True 
-
             timesteps_per_episode =  3 * env.agent_path_len
 
             if (e == 0 or e + 1 % cmd_print == 0) and bar_bool:
@@ -65,8 +62,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                                     widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
                 bar.start()
             
-            steps = 1
-
             for timestep in range(timesteps_per_episode):
                 action = agent.act(state)
                 next_state, _, reward, terminated = env.step(action)
@@ -76,7 +71,8 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 if env.pygame_render:
                     env.render()
                 if save_images:
-                    env.render_video(5, timestep)
+                    env.render_video(train_name, render)
+                render += 1
                 
                 if terminated:
                     agent.align_target_model()
@@ -111,6 +107,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             if (e + 1) % cmd_print == 0:
                 end_time = time.time()
                 computing_time = (end_time - start_time) / steps
+                steps = 0
                 if bar_bool: bar.finish()
                 print(f" Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/step")
                 # Reset and restart progress bar
@@ -120,8 +117,8 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             if (e + 1) % N == 0: 
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
-                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n\n")
-                print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}")
+                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n")
+                print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}\n")
                 batch_steps = batch_loss = batch_reward = agent.rand_act = agent.netw_act = 0
                 batch_start_time = time.time()
                 

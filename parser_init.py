@@ -1,8 +1,8 @@
 def init_parser(self):
    
-    self.add_argument('--method', type=str, choices=['dqn', 'qnet'], default='dqn',
-                        help='Choose the training method: deep Q-network or traditional Q-network')
-    self.add_argument('--render', type=str, choices=['pygame', 'all', 'off'], default='off',
+    self.add_argument('--method', type=str, choices=['dqn', 'qnet', 'mppo'], default='dqn',
+                        help='Choose the training method: deep Q-network, traditional Q-network or masked PPO agent')
+    self.add_argument('--render', type=str, choices=['pygame', 'video', 'off'], default='off',
                         help='Choose to visualize the training in pygame? Options: --render pygame, or --render off, or --render all for video and pygame rendering')
    # Add an argument for the number of episodes
     self.add_argument('--epochs', type=int, default=1000,

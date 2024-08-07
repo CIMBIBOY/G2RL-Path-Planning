@@ -1,6 +1,6 @@
+numpy
 opencv-python
 Pillow
-numpy
 torch
 matplotlib
 progressbar2

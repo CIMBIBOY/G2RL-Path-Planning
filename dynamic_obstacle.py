@@ -72,6 +72,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         agentDone = True
         inst_arr[h_new, w_new] = [0, 200, 0]  # mark goal cell as green
         arrived = True
+        agent_reward += rewards_dict('3')
 
     # Check for out of bounds or collisions with obstacles
     if (h_new >= h or w_new >= w) or (h_new < 0 or w_new < 0) or \

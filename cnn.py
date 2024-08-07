@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 class CNNLSTMModel(nn.Module):
     def __init__(self, height, width, depth, nt, dropout_rate=0.3):
@@ -29,9 +30,13 @@ class CNNLSTMModel(nn.Module):
 
         self.dense_1 = nn.Linear(512, 512)
         self.dense_dropout = nn.Dropout(dropout_rate)
-        self.dense_2 = nn.Linear(512, 5)
+        self.action_head = nn.Linear(512, 5)
+        self.value_head = nn.Linear(512, 1)  # Add a separate head for value prediction
 
-    def forward(self, x):
+        # Apply orthogonal initialization to the model
+        self.apply(self.orthogonal_init)
+
+    def forward(self, x, return_value=False):
         # Ensure input is float32
         x = x.float()
 
@@ -63,6 +68,19 @@ class CNNLSTMModel(nn.Module):
         x = self.dense_1(lstm_out)
         x = torch.relu(x)
         x = self.dense_dropout(x)
-        x = self.dense_2(x)
         
-        return x
+        # Action and value outputs
+        action_logits = self.action_head(x)
+        
+        # If the flag is set, also return the state value
+        if return_value:
+            state_value = self.value_head(x).squeeze(-1)  # Ensure the value is a scalar
+            return action_logits, state_value
+        
+        return action_logits
+
+    def orthogonal_init(self, m):
+        if isinstance(m, (nn.Conv3d, nn.Linear)):
+            nn.init.orthogonal_(m.weight, gain=np.sqrt(2))
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0)

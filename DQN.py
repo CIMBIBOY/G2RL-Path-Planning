@@ -81,7 +81,7 @@ class Agent:
             # print(f"random action: {action}")
             return action
         
-        q_values = self.q_network.forward(state_tensor)
+        q_values = self.q_network.forward(state_tensor, False)
         # Move the tensor to CPU before converting to numpy
         m_action = np.argmax(q_values[0].cpu().detach().numpy())
         self.netw_act += 1

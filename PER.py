@@ -1,5 +1,7 @@
-import random
+# PER.py
+
 import numpy as np
+import random
 
 class PrioritizedReplayBuffer:
     def __init__(self, capacity, alpha=0.6, beta=0.4, beta_increment=0.001):
@@ -12,7 +14,7 @@ class PrioritizedReplayBuffer:
         self.beta_increment = beta_increment
 
     def add(self, experience):
-        max_priority = self.priorities.max() if self.buffer else 1.0
+        max_priority = self.priorities.max() if len(self.buffer) > 0 else 1.0
 
         if len(self.buffer) < self.capacity:
             self.buffer.append(experience)
@@ -25,7 +27,8 @@ class PrioritizedReplayBuffer:
     def sample(self, batch_size):
         N = len(self.buffer)
         if N == 0:
-            return [], [], [], []
+            # Return empty arrays for each expected component
+            return [], [], [], [], [], [], [], [], []
 
         priorities = self.priorities[:N]
         probs = priorities ** self.alpha
@@ -39,8 +42,34 @@ class PrioritizedReplayBuffer:
         weights /= weights.max()  # Normalize weights
         self.beta = min(1.0, self.beta + self.beta_increment)
 
-        states, actions, rewards, next_states, dones = zip(*samples)
-        return states, actions, rewards, next_states, dones, indices, weights
+        # Determine tuple length and unpack accordingly
+        tuple_length = len(samples[0])
+        if tuple_length == 7:  # PPO tuple
+            states, actions, rewards, next_states, dones, log_probs, values = zip(*samples)
+            return (
+                np.array(states),
+                np.array(actions),
+                np.array(rewards),
+                np.array(next_states),
+                np.array(dones),
+                np.array(log_probs),
+                np.array(values),
+                indices,
+                weights,
+            )
+        elif tuple_length == 5:  # DQN tuple
+            states, actions, rewards, next_states, dones = zip(*samples)
+            return (
+                np.array(states),
+                np.array(actions),
+                np.array(rewards),
+                np.array(next_states),
+                np.array(dones),
+                indices,
+                weights,
+            )
+        else:
+            raise ValueError("Unexpected experience tuple length.")
 
     def update_priorities(self, indices, errors):
         for idx, error in zip(indices, errors):
