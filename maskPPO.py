@@ -50,7 +50,6 @@ class MaskPPOAgent:
         self.replay_buffer.add(experience)
 
     def update(self, states, actions, rewards, next_states, dones, log_probs, values):
-        stime = debug_start(self.debug, 'update')
         advantages, returns = self.compute_advantages_and_returns(rewards, values, dones)
 
         states = torch.from_numpy(np.array(states)).float().to(self.device)
@@ -90,7 +89,6 @@ class MaskPPOAgent:
         self.entropies.append(entropy.item())
         approx_kl_div = ((old_log_probs - new_log_probs) ** 2).mean().item()
         self.kl_divs.append(approx_kl_div)
-        debug_end(stime)
 
     def compute_advantages_and_returns(self, rewards, values, dones):
         advantages = np.zeros_like(rewards)
@@ -110,7 +108,7 @@ class MaskPPOAgent:
 
         # Handle the last timestep separately
         advantages[-1] = rewards[-1] - values[-1]
-        
+
         returns = advantages + values
         return advantages, returns
 
