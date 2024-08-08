@@ -1,0 +1,33 @@
+1. Init of Nt observation history store?
+
+including previous observations from last reset or taking 3 random actions to fill up the buffer?
+CNN takes input (batch_size, time_dim, obs_width, obs_height, rgb + local part of the global guidance)
+
+2. Intorducing negative and positive reward for getting further away or closer to the goal position for eliminating cases where it starts of to the wrong direction?
+
+optimal_path, _ = find_path(value_map, start_cell, end_cell)
+optimal_path_coords = return_path(optimal_path)
+optimal_path_length = len(optimal_path_coords)
+
+recalculate at every step -> helps guidance
+
+3. racing agent with TJPS method reciving reward for keeping up with algorithmic method?
+
+easy to implement
+
+4. How many steps does the ppo require 100 thousand, a million or more?
+
+poor performance after a train for 100 thousand steps - should see potential changes in behaviour...
+
+5. Adjustment of learning rate?
+
+def adjust_learning_rate(self, step, total_steps):
+        lr = 3e-4 * (1 - step / total_steps)
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr 
+
+6. Initializations and methods are correct in general? 
+
+there can always be an overlooked error... 
+
+7. 

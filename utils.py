@@ -1,5 +1,6 @@
 import numpy as np
-
+ 
+# TODO : check this method is local guidance correctly padded to the rgb chanels 
 def symmetric_pad_array(input_array: np.ndarray, target_shape: tuple, pad_val: int) -> np.ndarray:
 
     for dim_in, dim_target in zip(input_array.shape, target_shape):
