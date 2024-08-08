@@ -47,12 +47,14 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
     try:        
         for e in range(num_episodes):
             _, state = env.reset()
+            # Render the environment if it's enabled
+            if env.pygame_render:
+                env.render()
             episode_reward = 0
             episode_loss = 0
             terminated = False
 
             if e == 0: 
-                print(f"Input tensor dimension (state.shape): {state.shape}")
                 print(" ---------- Training Started ----------")
 
             timesteps_per_episode =  4 * env.agent_path_len
@@ -63,16 +65,21 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 bar.start()
             
             for timestep in range(timesteps_per_episode):
+                # Compute action
                 action = agent.act(state)
+                # Step the environment
                 next_state, _, reward, terminated = env.step(action)
-                if state.shape != (1, 1, 30, 30, 4): 
-                    agent.store(state, action, reward, next_state, terminated)
-                # Check for rendering toggle
+
+                # Render the environment if it's enabled
                 if env.pygame_render:
                     env.render()
                 if save_images:
                     env.render_video(train_name, render)
                 render += 1
+
+                # Store if shape is valid for the CNN input
+                if state.shape != (1, 1, 30, 30, 4): 
+                    agent.store(state, action, reward, next_state, terminated)
                 
                 if terminated:
                     agent.align_target_model()

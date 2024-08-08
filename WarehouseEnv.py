@@ -9,6 +9,7 @@ import imageio
 import pygame
 from collections import deque
 import torch
+import time
 
 def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
@@ -55,7 +56,6 @@ class WarehouseEnvironment:
         self.frames = []  # To store frames for .gif visualization
 
         self.pygame_render = pygame_render
-        pygame.init()
         self.screen = None
         self.clock = None
 
@@ -92,6 +92,9 @@ class WarehouseEnvironment:
         self.dist = manhattan_distance(start[0], start[1], end[0], end[1])
 
         self.agent_path = self.agents_paths[self.agent_idx]
+
+        self.observation_history.clear()
+        self.initial_random_steps = 0
 
         # Take initial step to get the first real observation
         graphical_state, _, _, _ = self.step(4)  # Assuming 4 is a valid initial action
@@ -192,22 +195,30 @@ class WarehouseEnvironment:
         h, w = agent_position
 
         # Check each possible action and set mask to 0 for invalid actions
-        if h <= 0 or not self.is_position_valid(h - 1, w):  # up
+        if h <= 0 or not self.is_position_valid(h, w - 1):  # up
             mask[0] = 0
-        if h >= self.height - 1 or not self.is_position_valid(h + 1, w):  # down
+            print(f"Invalid action: Up (h={h}, w={w - 1})")
+        if h >= self.height - 1 or not self.is_position_valid(h, w + 1):  # down
             mask[1] = 0
-        if w <= 0 or not self.is_position_valid(h, w - 1):  # left
+            print(f"Invalid action: Down (h={h}, w={w + 1})")
+        if w <= 0 or not self.is_position_valid(h - 1, w):  # left
             mask[2] = 0
-        if w >= self.width - 1 or not self.is_position_valid(h, w + 1):  # right
+            print(f"Invalid action: Left (h={h - 1}, w={w})")
+        if w >= self.width - 1 or not self.is_position_valid(h + 1, w):  # right
             mask[3] = 0
+            print(f"Invalid action: Right (h={h + 1}, w={w})")
 
         # Idle action is always valid
         mask[4] = 1
 
+        print(f"Action mask: {mask}")
         return torch.tensor(mask, device=device)
 
     def is_position_valid(self, h, w):
-        # Define what makes a position invalid
+        # Check if the position is within the map boundaries
+        if h < 0 or h >= self.height or w < 0 or w >= self.width:
+            return False
+        # Collision with:
         if (self.init_arr[h, w] == [255, 165, 0]).all():  # Dynamic obstacle
             return False
         if (self.init_arr[h, w] == [0, 0, 0]).all():  # Static obstacle
@@ -310,6 +321,7 @@ class WarehouseEnvironment:
         if self.pygame_render:  # Check if rendering is enabled
             if self.screen is None:  # Initialize only if not already initialized
                 pygame.init()
+                print("Pygame screen constructed")
                 self.screen = pygame.display.set_mode((200, 200))
                 self.clock = pygame.time.Clock()
 

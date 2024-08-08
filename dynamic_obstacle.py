@@ -62,6 +62,10 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
     h_new, w_new = h_old + direction[1], w_old + direction[0]
 
+    # Add some print statements to monitor the updates
+    print(f"Agent position: ({agent_old_coordinates[0]}, {agent_old_coordinates[1]})")
+    print(f"New agent position: ({h_new}, {w_new})")
+
     # print(f"Agent's goal cell: {agent_goal}")
     # Marking agent's goal cell as green 
     inst_arr[agent_goal[0], agent_goal[1]] = [0, 255, 0]

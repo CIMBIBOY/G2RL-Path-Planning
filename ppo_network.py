@@ -36,7 +36,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
     start_time = time.time()
     bar_bool = False  # Set to True if you want progress bars
     total_timesteps = num_episodes * timesteps_per_episode
-    batch_reward = 0
+    batch_rewards = []
     batch_start_time = time.time()
     steps = 0
     render = 0
@@ -44,10 +44,12 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
     try:
         for e in range(num_episodes):
             _, state = env.reset()
+            # Render the environment if enabled
+            if env.pygame_render:
+                env.render()  
             episode_reward = 0
             done = False
             if e == 0: 
-                print(f"Input tensor dimension (state.shape): {state.shape}")
                 print(" ---------- Training Started ----------")
 
             if (e == 0 or e + 1 % cmd_print == 0) and bar_bool:
@@ -65,19 +67,21 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
 
                 # Step environment
                 next_state, agent_pos, reward, done = env.step(action)
-                if state.shape != (1, 1, 30, 30, 4): 
-                    agent.store(state, action, reward, next_state, done, log_prob, value)
-                episode_reward += reward
-                batch_reward += episode_reward
 
-                if done:
-                    break
-
+                # Render the environment if enabled
                 if env.pygame_render:
-                    env.render()
+                    env.render()  
                 if save_images:
                     env.render_video(train_name, render)
                 render += 1
+
+                if state.shape != (1, 1, 30, 30, 4): 
+                    agent.store(state, action, reward, next_state, done, log_prob, value)
+                episode_reward += reward
+                batch_rewards.append(reward)
+
+                if done:
+                    break
 
                 state = next_state
 
@@ -110,10 +114,10 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
                 # Save the model weights every 100 episodes
-                print(f"\n-------------------- {e+1}'th episode --------------------\n Reward: {batch_reward:.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times")
+                print(f"\n-------------------- {e+1}'th episode --------------------\n Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times")
                 torch.save(agent.model.state_dict(), f'./weights/ppo_model_{device}_{train_name}.pth')
                 # Log ppo data
-                batch_reward = 0
+                batch_rewards = []
                 logs = agent.get_logs()
                 print(f"100 epoch Policy Loss: {logs['policy_loss']:.4f}")
                 print(f"100 epoch Value Loss: {logs['value_loss']:.4f}")
