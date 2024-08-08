@@ -38,7 +38,8 @@ class WarehouseEnvironment:
         # Agent id
         self.agent_idx = agent_idx
         # Agent's path length 
-        self.agent_path_len = 100     
+        self.agent_path_len = 100    
+        self.steps = 0 
         # Partial field of view size
         self.local_fov = local_fov
         self.time_idx = 1
@@ -60,6 +61,8 @@ class WarehouseEnvironment:
 
     
     def reset(self):
+        # reset step count for maximum timesteps
+        self.steps = 0
         # Initialize all dynamic obstacles
         self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
         
@@ -118,6 +121,7 @@ class WarehouseEnvironment:
     
 
     def step(self, action):
+        self.steps += 1
         if len(self.init_arr) == 0:
             print("Run env.reset() first")
             return None, None, None, False
@@ -146,6 +150,10 @@ class WarehouseEnvironment:
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
+            isAgentDone = True 
+
+        # maximum allowed steps for a single epoch
+        if self.steps > self.agent_path_len * 4:
             isAgentDone = True 
 
         combined_arr = np.array([])

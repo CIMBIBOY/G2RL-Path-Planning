@@ -3,6 +3,7 @@ from WarehouseEnv import WarehouseEnvironment
 from eval import evaluate_performance
 from DQN import Agent
 from cnn import CNNLSTMModel
+from maskPPO import MaskPPOAgent
 import torch
 
 def get_dimensions(nested_list):
@@ -47,11 +48,11 @@ if __name__ == '__main__':
         if torch.cuda.is_available(): metal = 'cuda'
         else: metal = 'cpu'
         # Init agent with network
-        agent = Agent(env, CNNLSTMModel(30,30,4,4), metal = metal)
-        model_weights_path = './weights/dqn_model_cuda_czm_1.pth'
+        agent = MaskPPOAgent(env, CNNLSTMModel(30,30,4,4).to(metal), device= metal, batch_size= 256)
+        model_weights_path = './weights/ppo_model_cuda_czm_ppo.pth'
         # Load model weights if provided
         if model_weights_path:
-            agent.q_network.load_state_dict(torch.load(model_weights_path))
+            agent.model.load_state_dict(torch.load(model_weights_path, map_location=metal, weights_only=True))
             print(f"Loaded model weights from: {model_weights_path}")
             print("Agent created")
 

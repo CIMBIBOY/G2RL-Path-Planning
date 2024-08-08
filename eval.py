@@ -47,7 +47,7 @@ def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode
     plt.savefig(os.path.join(eval_folder, f'episode_{episode + 1}_eval.png'))
     plt.close()
 
-def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"):
+def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images", model_type = 'ppo'):
     """
     Evaluates the performance of the agent in the WarehouseEnvironment.
 
@@ -107,8 +107,10 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         start_time = time.time()
 
         while not done:
-            if steps < 5: action = random.choice(agent._action_space)
-            else: action = agent.act(state)
+            if model_type == 'ppo': action, log_prob, value = agent.select_action(state)
+            elif model_type == 'dqn':
+                if steps < 5: action = random.choice(agent._action_space)
+                else: agent.act(state)
             step_result = env.step(action)
 
             # Ensure step_result has 4 values
@@ -122,7 +124,8 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
                 print(f"Warning: Step result contains None. Ending episode.")
                 break
 
-            agent.store(state, action, reward, next_state, done)
+            if model_type == 'ppo': agent.store(state, action, reward, next_state, done, log_prob, value)
+            elif model_type == 'dqn': agent.store(state, action, reward, next_state, done)
             state = next_state
             steps += 1
 

@@ -20,7 +20,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
     # Load model weights if provided
     if model_weights_path:
         try:
-            agent.model.load_state_dict(torch.load(model_weights_path, map_location=device))
+            agent.model.load_state_dict(torch.load(model_weights_path, map_location=device, weights_only=True))
             print(f"Loaded model weights from: {model_weights_path}")
             time.sleep(2)
         except Exception as e:
@@ -68,6 +68,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 if state.shape != (1, 1, 30, 30, 4): 
                     agent.store(state, action, reward, next_state, done, log_prob, value)
                 episode_reward += reward
+                batch_reward += episode_reward
 
                 if done:
                     break
@@ -112,6 +113,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 print(f"\n-------------------- {e+1}'th episode --------------------\n Reward: {batch_reward:.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times")
                 torch.save(agent.model.state_dict(), f'./weights/ppo_model_{device}_{train_name}.pth')
                 # Log ppo data
+                batch_reward = 0
                 logs = agent.get_logs()
                 print(f"100 epoch Policy Loss: {logs['policy_loss']:.4f}")
                 print(f"100 epoch Value Loss: {logs['value_loss']:.4f}")

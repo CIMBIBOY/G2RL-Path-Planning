@@ -55,7 +55,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 print(f"Input tensor dimension (state.shape): {state.shape}")
                 print(" ---------- Training Started ----------")
 
-            timesteps_per_episode =  3 * env.agent_path_len
+            timesteps_per_episode =  4 * env.agent_path_len
 
             if (e == 0 or e + 1 % cmd_print == 0) and bar_bool:
                 bar = progressbar.ProgressBar(maxval=cmd_print * timesteps_per_episode, 
