@@ -36,7 +36,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal):
+def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, collision_count, env):
     
     """ 
     Update coordinates
@@ -49,6 +49,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
     """
     h, w = inst_arr.shape[:2]
+    reversed = False
 
     local_obs = np.array([])
     local_map = np.array([])
@@ -60,13 +61,12 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
     agentDone = False
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
-    h_new, w_new = h_old + direction[1], w_old + direction[0]
+    h_new, w_new = h_old + direction[0], w_old - direction[1]
 
-    # Add some print statements to monitor the updates
-    print(f"Agent position: ({agent_old_coordinates[0]}, {agent_old_coordinates[1]})")
-    print(f"New agent position: ({h_new}, {w_new})")
+    # debug to monitor the agent's movement
+    #print(f"Agent position: ({agent_old_coordinates[0]}, {agent_old_coordinates[1]})")
+    #print(f"New agent position: ({h_new}, {w_new})")
 
-    # print(f"Agent's goal cell: {agent_goal}")
     # Marking agent's goal cell as green 
     inst_arr[agent_goal[0], agent_goal[1]] = [0, 255, 0]
 
@@ -84,6 +84,8 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
        (inst_arr[h_new, w_new][0] == 0 and inst_arr[h_new, w_new][1] == 0 and inst_arr[h_new, w_new][2] == 0):
         agent_reward += rewards_dict('1')
         agentDone = True
+        # print("Collision with obstacles or out of bounds")
+        collision_count += 1
         h_new, w_new = h_old, w_old
     else:
         if global_map[h_new, w_new] == 255:
@@ -99,56 +101,60 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     if new_dist < dist:
         dist = new_dist
 
-    # Update dynamic obstacles
-    for idx, path in enumerate(coords):
-        if idx == agent:
-            continue  # Skip the agent, we'll update it separately
-
-        if time_idx < len(path):
-            if time_idx == 2:
-                # For the first step, we don't move the obstacle
-                h_old_obs, w_old_obs = path[0]
-                h_new_obs, w_new_obs = path[0]
+    # At reset state objects don't move
+    if time_idx != 1: 
+        # Update dynamic obstacles
+        for idx, path in enumerate(coords):
+            if idx == agent:
+                continue  # Skip the agent, we'll update it separately
+            if time_idx < len(path) + 1:
+                h_old_obs, w_old_obs = path[time_idx-2]
+                h_new_obs, w_new_obs = path[time_idx-1]
             else:
-                h_old_obs, w_old_obs = path[time_idx - 1]
-                h_new_obs, w_new_obs = path[time_idx]
-        else:
-            continue  # Skip obstacles that have reached their goal
+                continue  # Skip obstacles that have reached their goal
 
-        # Check if the next position is occupied or out of bounds
-        is_occupied = (h_new_obs >= h or w_new_obs >= w or h_new_obs < 0 or w_new_obs < 0 or
-                       not np.array_equal(inst_arr[h_new_obs, w_new_obs], [255, 255, 255]))
+            # Check if the next position is occupied or out of bounds
+            is_occupied = (h_new_obs >= h or w_new_obs >= w or h_new_obs < 0 or w_new_obs < 0 or
+                        not np.array_equal(inst_arr[h_new_obs, w_new_obs], [255, 255, 255]))
 
-        if is_occupied:
-            if random.random() < 0.9:
-                # Stay in current position
-                h_new_obs, w_new_obs = h_old_obs, w_old_obs
-            else:
-                # Reverse direction and move back to start
-                coords[idx] = path[:time_idx][::-1] + [[h_old_obs, w_old_obs]]
-                h_new_obs, w_new_obs = coords[idx][1]  # Move to the next position in the reversed path
+            if is_occupied:
+                if random.random() < 0.9:
+                    # Stay in current position
+                    h_new_obs, w_new_obs = h_old_obs, w_old_obs
+                else:
+                    # Reverse direction and move back to start
+                    coords[idx] = path[:time_idx][::-1]
+                    reversed = True
+                    h_new_obs, w_new_obs = coords[idx][1]  # Move to the next position in the reversed path
+            
+            # Update the obstacle's position
+            # print(f"Dyn Obs: {idx} was at pos: {h_old_obs, w_old_obs} and now at {h_new_obs, w_new_obs}" )
+            if h_old_obs != h_new_obs or w_old_obs != w_new_obs:
+                inst_arr[h_old_obs, w_old_obs] = [255, 255, 255]  # Clear old position
+                inst_arr[h_new_obs, w_new_obs] = [255, 165, 0]  # Move to new position
+                coords[idx] = path[:time_idx-1] + [[h_new_obs, w_new_obs]] + path[time_idx:]
+            elif not reversed:
+                # If the obstacle didn't move, don't change its path
+                coords[idx] = path
+            else: continue
         
-        # Update the obstacle's position
-        # print(f"Dyn Obs: {idx} was at pos: {h_old_obs, w_old_obs} and now at {h_new_obs, w_new_obs}" )
-        inst_arr[h_old_obs, w_old_obs] = [255, 255, 255]  # Clear old position
-        inst_arr[h_new_obs, w_new_obs] = [255, 165, 0]  # Move to new position
-        coords[idx] = path[:time_idx] + [[h_new_obs, w_new_obs]] + path[time_idx+1:]
-    
     # Update agent position after moving obstacles
     if not agentDone:
         # Clear the previous agent position
         inst_arr[h_old, w_old] = [255, 255, 255]
         inst_arr[h_new, w_new] = [255, 0, 0]
 
-    # Update the agent's path in coords
-    coords[agent] = coords[agent][:time_idx] + [[h_new, w_new]] + coords[agent][time_idx+1:]
+    # Only update path if the action is non idle
+    if any(direction):
+        # Update the agent's path in coords
+        coords[agent] = agent_path[:time_idx-1] + [[h_new, w_new]] + agent_path[time_idx:]
 
     # Update local observation and global map
     local_obs = inst_arr[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
 
-    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, coords, arrived
+    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, coords, arrived, collision_count
 
 
 def rewards_dict(case, N = 0):

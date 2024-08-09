@@ -16,7 +16,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 20, agent_idx = 1, local_fov = 15, pygame_render = True):
+    def __init__(self,height = 48, width = 48, amr_count = 16, agent_idx = 0, local_fov = 15, pygame_render = True):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
@@ -39,15 +39,16 @@ class WarehouseEnvironment:
         # Agent id
         self.agent_idx = agent_idx
         # Agent's path length 
-        self.agent_path_len = 100    
+        self.agent_path_len = 100
+        self.agent_goal = None 
         self.steps = 0 
         # Partial field of view size
         self.local_fov = local_fov
-        self.time_idx = 1
+        self.time_idx = 0
         self.init_arr = []
         # Array for dynamic objects
         self.dynamic_coords = []
-        self.episode_count = 0
+        self.collisions = 0
 
         # Agent reached end position count 
         self.arrived = 0
@@ -79,7 +80,7 @@ class WarehouseEnvironment:
         # The agent is modified to red
         self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]  # Mark the agent's initial position in red
         
-        self.time_idx = 1
+        self.time_idx = 0
         self.scenes = []
         self.cells_skipped = 0
         
@@ -90,8 +91,10 @@ class WarehouseEnvironment:
         start = reset_state[0]
         end = reset_state[-1]
         self.dist = manhattan_distance(start[0], start[1], end[0], end[1])
+        self.agent_path_len = self.dist + 1
 
         self.agent_path = self.agents_paths[self.agent_idx]
+        self.agent_goal = self.agent_path[-1]  # Get the goal from the agent's path
 
         self.observation_history.clear()
         self.initial_random_steps = 0
@@ -101,14 +104,6 @@ class WarehouseEnvironment:
 
         # Increment the episode count
         self.episode_count += 1
-        
-        # Re-randomize the start and goal cells of all dynamic obstacles after 50 episodes
-        if self.episode_count % 50 == 0:
-            self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
-            self.generate_end_points_and_paths()
-            self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]
-            self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]
-            self.agent_path = self.agents_paths[self.agent_idx]
 
         return start[0] * start[1], graphical_state
     
@@ -129,22 +124,20 @@ class WarehouseEnvironment:
             print("Run env.reset() first")
             return None, None, None, False
 
-        self.time_idx += 1
         conv, x, y = self.action_dict[action]
         # print(f'Action taken: {conv}')
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
-
-        agent_goal = self.agent_path[-1]  # Get the goal from the agent's path
-        self.agent_path_len = len(self.agent_path)
         
+        self.time_idx += 1
+
         # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords, reached_goal = \
+        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords, reached_goal, self.collisions = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, agent_goal
+            self.cells_skipped, self.dist, self.agent_goal, self.collisions, self
         )
 
         self.agent_prev_coord = new_agent_coord
@@ -153,10 +146,12 @@ class WarehouseEnvironment:
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
+            # print("No global guidance")
             isAgentDone = True 
 
         # maximum allowed steps for a single epoch
-        if self.steps > self.agent_path_len * 4:
+        if self.steps > self.agent_path_len * 8:
+            # print("Max steps reached")
             isAgentDone = True 
 
         combined_arr = np.array([])
@@ -197,21 +192,21 @@ class WarehouseEnvironment:
         # Check each possible action and set mask to 0 for invalid actions
         if h <= 0 or not self.is_position_valid(h, w - 1):  # up
             mask[0] = 0
-            print(f"Invalid action: Up (h={h}, w={w - 1})")
+            # print(f"Invalid action: Up (h={h}, w={w - 1})")
         if h >= self.height - 1 or not self.is_position_valid(h, w + 1):  # down
             mask[1] = 0
-            print(f"Invalid action: Down (h={h}, w={w + 1})")
+            # print(f"Invalid action: Down (h={h}, w={w + 1})")
         if w <= 0 or not self.is_position_valid(h - 1, w):  # left
             mask[2] = 0
-            print(f"Invalid action: Left (h={h - 1}, w={w})")
+            # print(f"Invalid action: Left (h={h - 1}, w={w})")
         if w >= self.width - 1 or not self.is_position_valid(h + 1, w):  # right
             mask[3] = 0
-            print(f"Invalid action: Right (h={h + 1}, w={w})")
+            # print(f"Invalid action: Right (h={h + 1}, w={w})")
 
         # Idle action is always valid
         mask[4] = 1
 
-        print(f"Action mask: {mask}")
+        # print(f"Action mask: {mask}")
         return torch.tensor(mask, device=device)
 
     def is_position_valid(self, h, w):
@@ -237,7 +232,7 @@ class WarehouseEnvironment:
         for idx, idx_coords in start_end_coords:
             start = idx_coords[:2]
             end = idx_coords[2:]
-            assert start != end, "Kb lehetetlen, de mégis megtörténik..."
+            assert start != end, "Start and end coordinates cannot be indenticial"
             
             if isinstance(start, (list, tuple)) and len(start) == 2 and isinstance(end, (list, tuple)) and len(end) == 2:
                 path, fov = find_path(value_map, start, end)

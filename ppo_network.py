@@ -114,7 +114,8 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
                 # Save the model weights every 100 episodes
-                print(f"\n-------------------- {e+1}'th episode --------------------\n Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times")
+                print(f"\n---------------------------------------- {e+1}'th episode ----------------------------------------\n")
+                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs\n,  Goal reached: {env.arrived} times, Number of collisions: {env.collisions}\n")
                 torch.save(agent.model.state_dict(), f'./weights/ppo_model_{device}_{train_name}.pth')
                 # Log ppo data
                 batch_rewards = []
@@ -123,6 +124,11 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 print(f"100 epoch Value Loss: {logs['value_loss']:.4f}")
                 print(f"100 epoch Entropy: {logs['entropy']:.4f}")
                 print(f"100 epoch KL Divergence: {logs['approx_kl_div']:.4f}\n")
+
+            # Re-randomize the start and goal cells of all dynamic obstacles after 50 episodes
+            # e % 10000 == 0:
+            #   
+            # TODO: implement loading of a different map for better generalization
 
         print(" ---------- Training Finished ----------")
 
