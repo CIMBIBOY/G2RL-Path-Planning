@@ -9,7 +9,7 @@ import imageio
 import pygame
 from collections import deque
 import torch
-import time
+from utils import calculate_max_steps
 
 def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
@@ -48,13 +48,15 @@ class WarehouseEnvironment:
         self.init_arr = []
         # Array for dynamic objects
         self.dynamic_coords = []
+        self.stays = []
         self.collisions = 0
         self.last_action = 4
 
         # Agent reached end position count 
         self.arrived = 0
         self.episode_count = 0
-        self.decay = 8
+        self.max_step = 42
+       
 
         self.frames = []  # To store frames for .gif visualization
 
@@ -64,21 +66,33 @@ class WarehouseEnvironment:
 
     
     def reset(self):
-        # reset step count for maximum timesteps
-        self.steps = 0
-        # Initialize all dynamic obstacles
-        self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
+        # Increment the episode count
+        self.episode_count += 1
         
-        if self.init_arr is None or self.init_arr.size == 0:
-            raise ValueError("Initialization failed, init_arr is empty or None")
+        # Reset step count for maximum timesteps
+        self.steps = 0
+        
+        # Generate new coordinates and paths every 50 episodes
+        if self.episode_count % 50 == 1:
+            # Initialize all dynamic obstacles
+            self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
+            
+            if self.init_arr is None or self.init_arr.size == 0:
+                raise ValueError("Initialization failed, init_arr is empty or None")
 
-        # Generate destinations and routes
-        self.generate_end_points_and_paths()
-       
+            # Generate destinations and routes
+            self.generate_end_points_and_paths()
+        else:
+            # If not generating new paths, reset the init_arr to its original state
+            self.init_arr = self.map_img_arr.copy()
+            
+            # Reset dynamic obstacles to their initial positions
+            for idx, path in enumerate(self.dynamic_coords):
+                initial_pos = path[0]
+                self.init_arr[initial_pos[0], initial_pos[1]] = [255, 165, 0]  # Orange color for dynamic obstacles
+        
         # The dynamic obstacle corresponding to agent_idx is regarded as the controlled agent
         self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]  # Take the first position of the path
-        # print(self.agent_prev_coord)
-
         # The agent is modified to red
         self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]  # Mark the agent's initial position in red
         
@@ -89,6 +103,8 @@ class WarehouseEnvironment:
         # initialization state
         reset_state = self.dynamic_coords[self.agent_idx]
         
+        # calc maximum steps
+        self.max_step = calculate_max_steps(self.agent_path_len)
         # initial distance
         start = reset_state[0]
         end = reset_state[-1]
@@ -104,21 +120,7 @@ class WarehouseEnvironment:
         # Take initial step to get the first real observation
         graphical_state, _, _, _ = self.step(4)  # Assuming 4 is a valid initial action
 
-        # Increment the episode count
-        self.episode_count += 1
-
         return start[0] * start[1], graphical_state
-    
-
-    def get_stacked_state(self):
-        # Ensure we have exactly Nt observations
-        assert len(self.observation_history) == self.Nt, f"Expected {self.Nt} observations, but got {len(self.observation_history)}"
-        
-        # Stack the observations along the second axis (axis=1)
-        stacked_state = np.concatenate(list(self.observation_history), axis=1)
-
-        return stacked_state
-    
 
     def step(self, action):
         self.steps += 1
@@ -135,11 +137,11 @@ class WarehouseEnvironment:
 
         # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.collisions = \
+        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.collisions, self.stays = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.collisions
+            self.cells_skipped, self.dist, self.agent_goal, self.collisions, self.stays
         )
 
         self.agent_prev_coord = new_agent_coord
@@ -151,15 +153,7 @@ class WarehouseEnvironment:
             print("No global guidance")
             isAgentDone = True 
 
-        # maximum allowed steps for a single epoch
-       
-        if self.episode_count % 10000 == 0:
-            self.decay -= 1
-            # print("entered")
-        if self.decay < 3: 
-            self.decay = 3
-            # print("entered")
-        if self.steps > self.agent_path_len * self.decay:
+        if self.steps > self.max_step:
             # print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
             isAgentDone = True 
 
@@ -189,6 +183,15 @@ class WarehouseEnvironment:
             return_values = (stacked_state, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone)
         
         return return_values
+    
+    def get_stacked_state(self):
+        # Ensure we have exactly Nt observations
+        assert len(self.observation_history) == self.Nt, f"Expected {self.Nt} observations, but got {len(self.observation_history)}"
+        
+        # Stack the observations along the second axis (axis=1)
+        stacked_state = np.concatenate(list(self.observation_history), axis=1)
+
+        return stacked_state
     
     def get_action_mask(self, device):
         """Return a mask of valid actions, where 1 indicates a valid action and 0 indicates an invalid action."""

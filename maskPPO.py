@@ -36,7 +36,7 @@ class MaskPPOAgent:
             action_probs = torch.softmax(action_logits, dim=-1)
 
             mask = self.env.get_action_mask(self.device)
-            # print(f"Action probabilities before masking: {action_probs}")
+            # print(f"Action probabilities before masking: {action_probs}")
             # print(f"Action mask: {mask}")
             action_probs = action_probs * mask
             # print(f"Action probabilities after masking: {action_probs}")

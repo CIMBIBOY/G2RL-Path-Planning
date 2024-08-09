@@ -27,7 +27,7 @@ def test_agent(env, agent, num_episodes=100):
 if __name__ == '__main__':
     try:
         # Set up the environment
-        env = WarehouseEnvironment(pygame_render = False)
+        env = WarehouseEnvironment(pygame_render = True)
         _, state = env.reset() # image of first reset
 
         print(state.shape)

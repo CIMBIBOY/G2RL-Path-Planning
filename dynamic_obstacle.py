@@ -36,7 +36,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, collision_count):
+def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, collision_count, stayed_array):
     
     """ 
     Update coordinates
@@ -101,6 +101,8 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     if new_dist < dist:
         dist = new_dist
 
+    if time_idx == 1:
+        stayed_array = np.zeros(20, dtype=int)
     # At reset state objects don't move
     if time_idx != 1: 
         # Update dynamic obstacles
@@ -108,8 +110,8 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
             if idx == agent:
                 continue  # Skip the agent, we'll update it separately
             if time_idx < len(path) + 1:
-                h_old_obs, w_old_obs = path[time_idx-2]
-                h_new_obs, w_new_obs = path[time_idx-1]
+                h_old_obs, w_old_obs = path[time_idx-2-stayed_array[idx]]
+                h_new_obs, w_new_obs = path[time_idx-1-stayed_array[idx]]
             else:
                 continue  # Skip obstacles that have reached their goal
 
@@ -118,6 +120,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
                         not np.array_equal(inst_arr[h_new_obs, w_new_obs], [255, 255, 255]))
 
             if is_occupied:
+                stayed_array[idx] += 1
                 if random.random() < 0.9:
                     # Stay in current position
                     h_new_obs, w_new_obs = h_old_obs, w_old_obs
@@ -148,7 +151,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
 
-    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, collision_count
+    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, collision_count, stayed_array
 
 
 def rewards_dict(case, N = 0):
