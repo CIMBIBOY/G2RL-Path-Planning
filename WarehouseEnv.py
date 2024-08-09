@@ -215,18 +215,18 @@ class WarehouseEnvironment:
     def is_position_valid(self, h, w):
     
         if h < 0 or h >= self.height or w < 0 or w >= self.width:
-            print(f"Position ({h}, {w}) is out of bounds")
+            # print(f"Position ({h}, {w}) is out of bounds")
             return False
         
         if (self.init_arr[h, w] == [255, 165, 0]).all():
-            print(f"Position ({h}, {w}) contains a dynamic obstacle")
+            # print(f"Position ({h}, {w}) contains a dynamic obstacle")
             return False
         
         if (self.init_arr[h, w] == [0, 0, 0]).all():
-            print(f"Position ({h}, {w}) contains a static obstacle")
+            # print(f"Position ({h}, {w}) contains a static obstacle")
             return False
         
-        print(f"Position ({h}, {w}) is valid")
+        # print(f"Position ({h}, {w}) is valid")
         return True
     
     
