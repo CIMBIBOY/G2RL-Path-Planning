@@ -151,7 +151,10 @@ class WarehouseEnvironment:
             isAgentDone = True 
 
         # maximum allowed steps for a single epoch
-        if self.steps > self.agent_path_len * 8:
+        decay = 10
+        if self.episode_count % 1420: decay -= 1
+        if decay < 3: decay = 3
+        if self.steps > self.agent_path_len * decay:
             # print("Max steps reached")
             isAgentDone = True 
 

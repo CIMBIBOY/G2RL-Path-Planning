@@ -116,7 +116,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
                 # Save the model weights every 100 episodes
                 print(f"\n---------------------------------------- {e+1}'th episode ----------------------------------------\n")
-                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs\n,  Goal reached: {env.arrived} times, Number of collisions: {env.collisions}\n")
+                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs\nGoal reached: {env.arrived} times, Number of collisions: {env.collisions}\n")
                 torch.save(agent.model.state_dict(), f'./weights/ppo_model_{device}_{train_name}.pth')
                 # Log ppo data
                 batch_rewards = []
