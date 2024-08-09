@@ -155,12 +155,12 @@ class WarehouseEnvironment:
        
         if self.episode_count % 10000 == 0:
             self.decay -= 1
-            print("entered")
+            # print("entered")
         if self.decay < 3: 
             self.decay = 3
-            print("entered")
+            # print("entered")
         if self.steps > self.agent_path_len * self.decay:
-            print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
+            # print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
             isAgentDone = True 
 
         combined_arr = np.array([])
