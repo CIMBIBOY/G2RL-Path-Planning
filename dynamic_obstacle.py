@@ -49,7 +49,6 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
     """
     h, w = inst_arr.shape[:2]
-    reversed = False
 
     local_obs = np.array([])
     local_map = np.array([])
@@ -76,7 +75,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         agentDone = True
         inst_arr[h_new, w_new] = [0, 255, 0]  # mark goal cell as green
         arrived = True
-        agent_reward += rewards_dict('3')
+        agent_reward += rewards_dict('3', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]))
 
     # Check for out of bounds or collisions with obstacles
     if (h_new >= h or w_new >= w) or (h_new < 0 or w_new < 0) or \
@@ -120,14 +119,14 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
                         not np.array_equal(inst_arr[h_new_obs, w_new_obs], [255, 255, 255]))
 
             if is_occupied:
-                stayed_array[idx] += 1
                 if random.random() < 0.9:
+                    stayed_array[idx] += 1
                     # Stay in current position
                     h_new_obs, w_new_obs = h_old_obs, w_old_obs
                 else:
                     # Reverse direction and move back to start
-                    coords[idx] = path[:time_idx][::-1]
-                    reversed = True
+                    coords[idx] = path[:time_idx-stayed_array[idx]][::-1]
+                    stayed_array[idx] = time_idx - 2
                     h_new_obs, w_new_obs = coords[idx][1]  # Move to the next position in the reversed path
             
             # Update the obstacle's position
@@ -154,21 +153,23 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, collision_count, stayed_array
 
 
-def rewards_dict(case, N = 0):
+def rewards_dict(case, N = 0, path_len = 0):
 
     """
     Return reward value
     r1 indicates that the robot reaches the free point of non-global navigation
     r2 means the robot hit an obstacle
     r3 indicates that the robot reaches the global navigation point
-    r4 available for additional reward option
+    r4 agent follows it's global guidance path
+    r5 upkept reward for additional options
     """
-    r1,r2,r3,r4 = -0.01, -0.1, 0.1, 0.05
+    r1,r2,r3,r4,r5= -0.01, -0.1, 0.1, 0.1 * path_len, 1
     rewards = {
         '0': r1,
         '1': r1 + r2,
         '2': r1 + N * r3,
-        '3': r4
+        '3': r4,
+        '4': r5
     }
 
     return rewards[case]

@@ -90,6 +90,7 @@ class WarehouseEnvironment:
             for idx, path in enumerate(self.dynamic_coords):
                 initial_pos = path[0]
                 self.init_arr[initial_pos[0], initial_pos[1]] = [255, 165, 0]  # Orange color for dynamic obstacles
+            self.global_mapper_arr = global_guidance(self.agents_paths[self.agent_idx], self.map_img_arr.squeeze())
         
         # The dynamic obstacle corresponding to agent_idx is regarded as the controlled agent
         self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]  # Take the first position of the path
