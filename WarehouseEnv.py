@@ -49,6 +49,7 @@ class WarehouseEnvironment:
         # Array for dynamic objects
         self.dynamic_coords = []
         self.collisions = 0
+        self.last_action = 4
 
         # Agent reached end position count 
         self.arrived = 0
@@ -190,34 +191,42 @@ class WarehouseEnvironment:
         h, w = agent_position
 
         # Check each possible action and set mask to 0 for invalid actions
-        if h <= 0 or not self.is_position_valid(h, w - 1):  # up
+        if w < 0 or not self.is_position_valid(h, w - 1):  # up
             mask[0] = 0
             # print(f"Invalid action: Up (h={h}, w={w - 1})")
-        if h >= self.height - 1 or not self.is_position_valid(h, w + 1):  # down
+        if w >= self.width or not self.is_position_valid(h, w + 1):  # down
             mask[1] = 0
             # print(f"Invalid action: Down (h={h}, w={w + 1})")
-        if w <= 0 or not self.is_position_valid(h - 1, w):  # left
+        if h < 0 or not self.is_position_valid(h - 1, w):  # left
             mask[2] = 0
             # print(f"Invalid action: Left (h={h - 1}, w={w})")
-        if w >= self.width - 1 or not self.is_position_valid(h + 1, w):  # right
+        if h >= self.height or not self.is_position_valid(h + 1, w):  # right
             mask[3] = 0
             # print(f"Invalid action: Right (h={h + 1}, w={w})")
 
-        # Idle action is always valid
-        mask[4] = 1
+        if self.last_action == 4:
+            mask[4] = 0
+        else: # Idle action is only valid if last 3 wasn't idle
+            mask[4] = 1
 
         # print(f"Action mask: {mask}")
         return torch.tensor(mask, device=device)
 
     def is_position_valid(self, h, w):
-        # Check if the position is within the map boundaries
+    
         if h < 0 or h >= self.height or w < 0 or w >= self.width:
+            print(f"Position ({h}, {w}) is out of bounds")
             return False
-        # Collision with:
-        if (self.init_arr[h, w] == [255, 165, 0]).all():  # Dynamic obstacle
+        
+        if (self.init_arr[h, w] == [255, 165, 0]).all():
+            print(f"Position ({h}, {w}) contains a dynamic obstacle")
             return False
-        if (self.init_arr[h, w] == [0, 0, 0]).all():  # Static obstacle
+        
+        if (self.init_arr[h, w] == [0, 0, 0]).all():
+            print(f"Position ({h}, {w}) contains a static obstacle")
             return False
+        
+        print(f"Position ({h}, {w}) is valid")
         return True
     
     

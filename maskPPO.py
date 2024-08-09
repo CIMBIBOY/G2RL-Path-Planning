@@ -36,18 +36,23 @@ class MaskPPOAgent:
             action_probs = torch.softmax(action_logits, dim=-1)
 
             mask = self.env.get_action_mask(self.device)
-            # print(f"Action probabilities before masking: {action_probs}")
-            # print(f"Action mask: {mask}")
-
+            print(f"Action probabilities before masking: {action_probs}")
+            print(f"Action mask: {mask}")
             action_probs = action_probs * mask
             # print(f"Action probabilities after masking: {action_probs}")
 
-            action_probs = action_probs / action_probs.sum(dim=-1, keepdim=True)
-            action_distribution = torch.distributions.Categorical(action_probs)
-            action = action_distribution.sample()
-            log_prob = action_distribution.log_prob(action)
+            # Check if there are any valid actions
+            if action_probs.sum() > 0:
+                action_probs = action_probs / action_probs.sum(dim=-1, keepdim=True)
+                action_distribution = torch.distributions.Categorical(action_probs)
+                action = action_distribution.sample()
+                log_prob = action_distribution.log_prob(action)
+            else:
+                # If no valid actions, select idle (action 4)
+                action = torch.tensor(4, device=self.device)
+                log_prob = torch.tensor(0.0, device=self.device)
 
-            # print(f"Action selected: {action.item()}")
+            print(f"Action selected: {action.item()}")
 
         return action.item(), log_prob.item(), state_value.item()
 
