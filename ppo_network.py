@@ -64,7 +64,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
 
                 # Select action
                 action, log_prob, value = agent.select_action(state)
-                env.last_action = action # store the last action for better masking
+                env.last_action = action # store the last action for better maskin[[g
 
                 # Step environment
                 next_state, agent_pos, reward, done = env.step(action)
