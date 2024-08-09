@@ -54,6 +54,7 @@ class WarehouseEnvironment:
         # Agent reached end position count 
         self.arrived = 0
         self.episode_count = 0
+        self.decay = 8
 
         self.frames = []  # To store frames for .gif visualization
 
@@ -134,11 +135,11 @@ class WarehouseEnvironment:
 
         # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, self.dynamic_coords, reached_goal, self.collisions = \
+        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.collisions = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.collisions, self
+            self.cells_skipped, self.dist, self.agent_goal, self.collisions
         )
 
         self.agent_prev_coord = new_agent_coord
@@ -147,15 +148,19 @@ class WarehouseEnvironment:
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
-            # print("No global guidance")
+            print("No global guidance")
             isAgentDone = True 
 
         # maximum allowed steps for a single epoch
-        decay = 10
-        if self.episode_count % 1420: decay -= 1
-        if decay < 3: decay = 3
-        if self.steps > self.agent_path_len * decay:
-            # print("Max steps reached")
+       
+        if self.episode_count % 10000 == 0:
+            self.decay -= 1
+            print("entered")
+        if self.decay < 3: 
+            self.decay = 3
+            print("entered")
+        if self.steps > self.agent_path_len * self.decay:
+            print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
             isAgentDone = True 
 
         combined_arr = np.array([])
@@ -265,11 +270,9 @@ class WarehouseEnvironment:
         self.global_mapper_arr = global_guidance(self.agents_paths[self.agent_idx], self.map_img_arr.squeeze())
 
     def has_global_guidance(self):
-        half_fov = self.local_fov // 2
-        
         local_guidance = self.global_mapper_arr[
-            max(0, self.agent_prev_coord[0] - half_fov):min(self.width, self.agent_prev_coord[0] + half_fov + 1),
-            max(0, self.agent_prev_coord[1] - half_fov):min(self.width, self.agent_prev_coord[1] + half_fov + 1)
+            max(0, self.agent_prev_coord[0] - self.local_fov):min(self.width, self.agent_prev_coord[0] + self.local_fov + 1),
+            max(0, self.agent_prev_coord[1] - self.local_fov):min(self.width, self.agent_prev_coord[1] + self.local_fov + 1)
         ]
         
         # Check if there's any global guidance information (value less than 255) in the local observation
