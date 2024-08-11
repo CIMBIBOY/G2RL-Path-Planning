@@ -48,7 +48,7 @@ if __name__ == '__main__':
         if torch.cuda.is_available(): metal = 'cuda'
         else: metal = 'cpu'
         # Init agent with network
-        agent = MaskPPOAgent(env, CNNLSTMModel(30,30,4,4).to(metal), device= metal, batch_size= 256)
+        agent = MaskPPOAgent(env, CNNLSTMModel(30,30,4,3).to(metal), device= metal, batch_size= 256)
         model_weights_path = './weights/ppo_model_cuda_czm_ppo.pth'
         # Load model weights if provided
         if model_weights_path:

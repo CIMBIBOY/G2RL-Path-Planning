@@ -10,12 +10,12 @@ import time
 from model_summary import print_model_summary
 
 # PPO training script
-def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images=False, device='cpu', model_weights_path=None, batch_size=8, train_name='train', cmd_log=5):
+def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images=False, device='cpu', model_weights_path=None, batch_size=32, train_name='train', cmd_log=5):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Currently running training on device: {device}")
 
     # Initialize the PPO agent with its network
-    agent = MaskPPOAgent(env, CNNLSTMModel(30, 30, 4, 4).to(device), device=device, batch_size=batch_size)
+    agent = MaskPPOAgent(env, CNNLSTMModel(30, 30, 4, 3).to(device), device=device, batch_size=batch_size)
     
     # Load model weights if provided
     if model_weights_path:
@@ -111,12 +111,13 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 print(f"Entropy: {logs['entropy']:.4f}")
                 print(f"KL Divergence: {logs['approx_kl_div']:.4f}\n")
 
-            if (e + 1) % 102 == 0:
+            if (e + 1) % 50 == 0:
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
                 # Save the model weights every 100 episodes
                 print(f"\n---------------------------------------- {e+1}'th episode ----------------------------------------\n")
-                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs\nGoal reached: {env.arrived} times, Number of collisions: {env.collisions}\n")
+                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/100 epochs\nGoal reached for start-goal pair: {env.arrived} times, Number of collisions: {env.collisions}\n")
+                print(f"Terminations casued by - Reached goals: {env.terminations[0]}, No guidance information: {env.terminations[1]}, Max steps reached: {env.terminations[2]}")
                 torch.save(agent.model.state_dict(), f'./weights/ppo_model_{device}_{train_name}.pth')
                 # Log ppo data
                 batch_rewards = []

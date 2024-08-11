@@ -47,6 +47,8 @@ def print_model_summary(model, input_size, batch_size):
         h.remove()
 
     print('-------------------------------------------------------')
+    print(f'Input Shape: {input_size}')
+    print('-------------------------------------------------------')
     print(f'{"Layer (type)":<25} {"Output Shape":<20} {"Param #":<10}')
     print('=======================================================')
     total_params = 0

@@ -49,6 +49,7 @@ class WarehouseEnvironment:
         # Array for dynamic objects
         self.dynamic_coords = []
         self.stays = []
+        self.terminations = np.zeros(3)
         self.collisions = 0
         self.last_action = 4
 
@@ -57,7 +58,6 @@ class WarehouseEnvironment:
         self.episode_count = 0
         self.max_step = 42
        
-
         self.frames = []  # To store frames for .gif visualization
 
         self.pygame_render = pygame_render
@@ -82,6 +82,8 @@ class WarehouseEnvironment:
 
             # Generate destinations and routes
             self.generate_end_points_and_paths()
+            # Set dones for new start-goal pair
+            self.arrived = 0
         else:
             # If not generating new paths, reset the init_arr to its original state
             self.init_arr = self.map_img_arr.copy()
@@ -148,15 +150,17 @@ class WarehouseEnvironment:
         self.agent_prev_coord = new_agent_coord
         if reached_goal == True:
             self.arrived += 1
+            self.terminations[0] += 1
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
-            print("No global guidance")
             isAgentDone = True 
+            self.terminations[1] += 1
 
         if self.steps > self.max_step:
             # print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
             isAgentDone = True 
+            self.terminations[2] += 1
 
         combined_arr = np.array([])
         if len(local_obs) > 0:

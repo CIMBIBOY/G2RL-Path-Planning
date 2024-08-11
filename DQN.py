@@ -9,14 +9,14 @@ from torch.optim.lr_scheduler import StepLR
 from PER import PrioritizedReplayBuffer
 
 class Agent:
-    def __init__(self, enviroment, model, total_training_steps = 180000, metal = 'cuda'):
+    def __init__(self, enviroment, model, total_training_steps = 180000, metal = 'cuda', batch_size = 32):
         
         # The number of states is the number of cells in the environment
         self._state_size = enviroment.n_states
         self._action_space = enviroment.action_space()
         self._action_size = enviroment.n_actions
         # Experience replay pool
-        self.batch_size = 32
+        self.batch_size = batch_size
         self.expirience_replay = PrioritizedReplayBuffer(capacity=10000)
         
         # Initialize discount and exploration rate
@@ -28,7 +28,7 @@ class Agent:
 
         self.device = torch.device(metal)
         self.q_network = model.to(self.device)
-        self.target_network = type(model)(30, 30, 4, 4).to(self.device)
+        self.target_network = type(model)(30, 30, 4, 3, self.batch_size).to(self.device)
 
         self.target_network.load_state_dict(self.q_network.state_dict())  # Copy weights from q_network to target_network
         self.target_network.eval()  # Set target network to evaluation mode
@@ -54,7 +54,7 @@ class Agent:
 
     def _build_compile_model(self):
         # Build initialization network model
-        model = CNNLSTMModel(48,48,4,4)
+        model = CNNLSTMModel(48,48,4,3)
         return model
 
     def align_target_model(self):

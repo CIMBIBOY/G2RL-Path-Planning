@@ -9,14 +9,14 @@ import numpy as np
 from train_utils import debug_start, debug_end
 
 # DQN training script
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 8, train_name = 'train', cmd_log = 5, explore = 200000):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 32, train_name = 'train', cmd_log = 5, explore = 200000):
     # Set the device to CUDA if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Currently running training on device: {device}")
 
     # Initialize the agent with its network
-    agent = Agent(env, CNNLSTMModel(30,30,4,4).to(device), total_training_steps=explore, metal = device)
     agent.batch_size = batch_size
+    agent = Agent(env, CNNLSTMModel(30,30,4,3).to(device), total_training_steps=explore, metal = device)
     N = 100
 
    # Load model weights if provided
