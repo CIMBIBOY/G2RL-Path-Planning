@@ -9,11 +9,11 @@ import time
 import pygame
 
 '''
-python3 main.py --render off --method mppo --epochs 100000 --timesteps 1000 --seed 420 --metal cuda --train retrain --model_weights weights/ppo_model_cuda_czm_ppo.pth --batch 256 --train_name czm_ppo --cmd_log 5
+python3 main.py --render off --method mppo --epochs 100001 --timesteps 1000 --seed 7 --metal cuda --train scratch  --batch 256 --train_name czm_hedge --cmd_log 5
 
-python3 main.py --render pygame --method mppo --epochs 100000 --timesteps 1000 --metal cpu --seed 412 --train retrain --model_weights weights/ppo_model_cuda_czm_sun.pth --batch 64 --train_name czm_test --cmd_log 5
+python3 main.py --render off --method mppo --epochs 100001 --timesteps 1000 --metal cuda --seed 7 --train retrain --model_weights weights/ppo_model_cuda_czm_hedge.pth --batch 256 --train_name czm_hedge --cmd_log 5
 
-python3 main.py --render off --method mppo --epochs 100000 --timesteps 1000 --metal cpu --seed 410 --train scratch --batch 64 --train_name czm_hedge --cmd_log 5
+python3 main.py --render on --method mppo --epochs 100001 --timesteps 1000 --metal cpu --seed 410 --train scratch --batch 64 --train_name czm_hedge --cmd_log 5
 '''
 
 if __name__ == '__main__':
