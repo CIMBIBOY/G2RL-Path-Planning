@@ -14,3 +14,5 @@ weights/dqn_model_cpu_czm.pth
 weights/dqn_model_cuda_czm_1.pth
 weights/ppo_model_cpu_czm_ppo.pth
 weights/ppo_model_cuda_czm_ppo.pth
+weights/ppo_model_cpu_czm_hedge.pth
+weights/ppo_model_cuda_czm_hedge.pth
