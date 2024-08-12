@@ -82,18 +82,29 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
        (inst_arr[h_new, w_new][0] == 255 and inst_arr[h_new, w_new][1] == 165 and inst_arr[h_new, w_new][2] == 0) or \
        (inst_arr[h_new, w_new][0] == 0 and inst_arr[h_new, w_new][1] == 0 and inst_arr[h_new, w_new][2] == 0):
         agent_reward += rewards_dict('1')
+        print("Reward for collision")
         agentDone = True
         # print("Collision with obstacles or out of bounds")
         collision_count += 1
         h_new, w_new = h_old, w_old
     else:
-        if global_map[h_new, w_new] == 255:
+        if direction[0] == 0 and direction[1] == 0: 
             agent_reward += rewards_dict('0')
-            cells_skipped += 1
-        
-        if global_map[h_new, w_new] != 255 and cells_skipped >= 0:
-            agent_reward += rewards_dict('2', cells_skipped)
-            cells_skipped = 0
+            print("Reward for non global navigation")
+        else:
+            if global_map[h_new, w_new] == 255:
+                agent_reward += rewards_dict('0')
+                print("Reward for non global navigation")
+                cells_skipped += 1
+
+            if global_map[h_new, w_new] != 255 and cells_skipped == 0:
+                agent_reward += rewards_dict('4')
+                print("Reward for staying on the global path")
+            
+            if global_map[h_new, w_new] != 255 and cells_skipped > 0:
+                agent_reward += rewards_dict('2', cells_skipped)
+                print("Reward for retruning to global path")
+                cells_skipped = 0
 
     # Calculate new distance
     new_dist = manhattan_distance(h_new, w_new, agent_path[-1][0], agent_path[-1][1])
@@ -160,10 +171,10 @@ def rewards_dict(case, N = 0, path_len = 0):
     r1 indicates that the robot reaches the free point of non-global navigation
     r2 means the robot hit an obstacle
     r3 indicates that the robot reaches the global navigation point
-    r4 agent follows it's global guidance path
-    r5 upkept reward for additional options
+    r4 agent reaches it's goal
+    r5 agent follows it's global guidance path
     """
-    r1,r2,r3,r4,r5= -0.01, -0.1, 0.1, 0.1 * path_len, 1
+    r1,r2,r3,r4,r5= -0.01, -0.1, 0.1, 0.1 * path_len/10, 0.16
     rewards = {
         '0': r1,
         '1': r1 + r2,

@@ -27,32 +27,45 @@ class MaskPPOAgent:
         self.entropies = []
         self.kl_divs = []
 
-        self.debug = 0
+        self.debug = 1
 
     def select_action(self, state):
+        if self.debug:
+            print("Debug: Selecting action")
+            print(f"Debug: Input state shape: {state.shape}")
+        
         state = torch.from_numpy(state).float().to(self.device)
         with torch.no_grad():
             action_logits, state_value = self.model(state, return_value=True)
             action_probs = torch.softmax(action_logits, dim=-1)
 
             mask = self.env.get_action_mask(self.device)
-            # print(f"Action probabilities before masking: {action_probs}")
-            # print(f"Action mask: {mask}")
+            if self.debug:
+                print(f"Debug: Action probabilities before masking: {action_probs}")
+                print(f"Debug: Action mask: {mask}")
+            
             action_probs = action_probs * mask
-            # print(f"Action probabilities after masking: {action_probs}")
+            
+            if self.debug:
+                print(f"Debug: Action probabilities after masking: {action_probs}")
 
-            # Check if there are any valid actions
             if action_probs.sum() > 0:
                 action_probs = action_probs / action_probs.sum(dim=-1, keepdim=True)
+                if self.debug:
+                    print(f"Debug: Action probabilities after probability sum: {action_probs}")
                 action_distribution = torch.distributions.Categorical(action_probs)
+                if self.debug:
+                    print(f"Debug: Action distribution: {action_distribution}")
                 action = action_distribution.sample()
                 log_prob = action_distribution.log_prob(action)
             else:
-                # If no valid actions, select idle (action 4)
                 action = torch.tensor(4, device=self.device)
                 log_prob = torch.tensor(0.0, device=self.device)
 
-            # print(f"Action selected: {action.item()}")
+            if self.debug:
+                print(f"Debug: Action selected: {action.item()}")
+                print(f"Debug: Log probability: {log_prob.item()}")
+                print(f"Debug: State value: {state_value.item()}")
 
         return action.item(), log_prob.item(), state_value.item()
 
@@ -61,7 +74,12 @@ class MaskPPOAgent:
         self.replay_buffer.add(experience)
 
     def update(self, states, actions, rewards, next_states, dones, log_probs, values):
+        if self.debug:
+            print("Debug: Starting update")
+
         advantages, returns = self.compute_advantages_and_returns(rewards, values, dones)
+        if self.debug:
+            print(f"Debug: Advantages: {advantages}, returns: {returns}")
 
         states = torch.from_numpy(np.array(states)).float().to(self.device)
         actions = torch.from_numpy(np.array(actions)).long().to(self.device)
@@ -72,6 +90,9 @@ class MaskPPOAgent:
 
         states = states.squeeze(1)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+        if self.debug:
+            print(f"Debug: Normalized advantages mean: {advantages.mean()}, std: {advantages.std()}")
 
         action_logits, state_values = self.model(states, return_value=True)
         new_log_probs = torch.distributions.Categorical(torch.softmax(action_logits, dim=-1)).log_prob(actions)
@@ -89,6 +110,12 @@ class MaskPPOAgent:
 
         loss = policy_loss + self.c1 * value_loss - self.c2 * entropy
 
+        if self.debug:
+            print(f"Debug: Policy loss: {policy_loss.item()}")
+            print(f"Debug: Value loss: {value_loss.item()}")
+            print(f"Debug: Entropy: {entropy.item()}")
+            print(f"Debug: Total loss: {loss.item()}")
+
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)
@@ -100,6 +127,10 @@ class MaskPPOAgent:
         self.entropies.append(entropy.item())
         approx_kl_div = ((old_log_probs - new_log_probs) ** 2).mean().item()
         self.kl_divs.append(approx_kl_div)
+
+        if self.debug:
+            print(f"Debug: Approximate KL divergence: {approx_kl_div}")
+            print("Debug: Update completed")
 
     def compute_advantages_and_returns(self, rewards, values, dones):
         advantages = np.zeros_like(rewards)

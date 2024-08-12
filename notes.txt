@@ -1,7 +1,7 @@
 1. Init of Nt observation history store?
 
 including previous observations from last reset or taking 3 random actions to fill up the buffer?
-CNN takes input (batch_size, time_dim, obs_width, obs_height, rgb + local part of the global guidance)
+CNN takes input (batch_size, time_dim, obs_width, obs_height, chanels: rgb + local part of the global guidance)
 
 2. Intorducing negative and positive reward for getting further away or closer to the goal position for eliminating cases where it starts of to the wrong direction?
 
