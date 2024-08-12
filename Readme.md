@@ -1,7 +1,8 @@
 # G2RL-Path-Planning
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/CIMBIBOY/G2RL-Path-Planning/blob/master/LICENSE)
 
-# The present state of G2RL-Path-Planning is a work in progress. In case of constructive toughts please open an issue.
+# The present state of G2RL-Path-Planning is a work in progress. 
+# In case of constructive toughts please open an issue.
 
 __Table of Contents__
 - [Introduction](#introduction)
