@@ -18,7 +18,7 @@ Hey, my name is Márk Czimber, I work as an intern at HUN-REN - SZTAKI, System a
 
 G2RL-Path-Planning is an implementation of [arXiv paper](https://arxiv.org/abs/2005.05420) Mobile Robot Path Planning in Dynamic Environments through Globally Guided Reinforcement Learning.
 
-I used open source code parts from [Tushar-ml/G2RL-Path-Planning](https://github.com/Tushar-ml/G2RL-Path-Planning) and [Yu-Haoyang/G2RL-Path-Planning](https://github.com/Yu-Haoyang/G2RL-Path-Planning), which helped a great lot in speeding the implementation process. Huge thanks to them from afar!
+I used open source code parts from [Tushar-ml/G2RL-Path-Planning](https://github.com/Tushar-ml/G2RL-Path-Planning) and [Yu-Haoyang/G2RL-Path-Planning](https://github.com/Yu-Haoyang/G2RL-Path-Planning), which provided some help to implement the paper. Thanks to them from afar!
  
 My goal is to understand, experiment, improve or even supplement the implementation in order to promote the advancement of general robotics!
 
