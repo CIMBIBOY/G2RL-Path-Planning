@@ -14,7 +14,7 @@ def get_dimensions(nested_list):
     else:
         raise ValueError("Input must be a list or numpy array")
 
-def test_agent(env, agent, num_episodes=100):
+def test_agent(env, agent, num_episodes=50):
     try:
         print(" ---------- Evaluating Performance ----------")
         performance_metrics = evaluate_performance(env, agent, num_episodes=num_episodes)
@@ -49,7 +49,7 @@ if __name__ == '__main__':
         else: metal = 'cpu'
         # Init agent with network
         agent = MaskPPOAgent(env, CNNLSTMModel(30,30,4,3).to(metal), device= metal, batch_size= 256)
-        model_weights_path = './weights/ppo_model_cuda_czm_ppo.pth'
+        model_weights_path = './weights/ppo_model_cuda_czm_hedge.pth'
         # Load model weights if provided
         if model_weights_path:
             agent.model.load_state_dict(torch.load(model_weights_path, map_location=metal, weights_only=True))

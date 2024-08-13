@@ -72,7 +72,7 @@ class WarehouseEnvironment:
         self.steps = 0
         
         # Generate new coordinates and paths every 50 episodes
-        if self.episode_count % 50 == 1:
+        if self.episode_count == 0 or self.episode_count % 50 == 1:
             # Initialize all dynamic obstacles
             self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
             

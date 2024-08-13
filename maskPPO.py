@@ -27,7 +27,7 @@ class MaskPPOAgent:
         self.entropies = []
         self.kl_divs = []
 
-        self.debug = 1
+        self.debug = 0
 
     def select_action(self, state):
         if self.debug:
