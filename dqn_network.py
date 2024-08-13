@@ -9,7 +9,7 @@ import numpy as np
 from train_utils import debug_start, debug_end
 
 # DQN training script
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 32, train_name = 'train', cmd_log = 5, explore = 200000):
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 32, train_name = 'train', cmd_log = 5, explore = 200000):
     # Set the device to CUDA if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Currently running training on device: {device}")
@@ -55,8 +55,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
             if e == 0: 
                 print(" ---------- Training Started ----------")
-
-            timesteps_per_episode =  4 * env.agent_path_len
 
             if (e == 0 or e + 1 % cmd_print == 0) and bar_bool:
                 bar = progressbar.ProgressBar(maxval=cmd_print * timesteps_per_episode, 
