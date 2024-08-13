@@ -6,6 +6,7 @@ __pycache__
 .models/
 g2rl/
 models/
+weights/
 weights/dqn_model_cpu.pth
 weights/dqn_model_cuda.pth
 weights/dqn_model_cpu_2.pth
@@ -17,3 +18,5 @@ weights/ppo_model_cuda_czm_ppo.pth
 weights/ppo_model_cpu_czm_hedge.pth
 weights/ppo_model_cuda_czm_hedge.pth
 weights/ppo_model_cuda_czm_sun.pth
+weights/dqn_model_cpu_czm_hedge.pth
+weights/dqn_model_cuda_czm_hedge.pth

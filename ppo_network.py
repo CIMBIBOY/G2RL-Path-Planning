@@ -16,7 +16,8 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
 
     # Initialize the PPO agent with its network
     agent = MaskPPOAgent(env, CNNLSTMModel(30, 30, 4, 3).to(device), device=device, batch_size=batch_size)
-    
+    N = 50
+
     # Load model weights if provided
     if model_weights_path:
         try:
@@ -38,8 +39,8 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
     total_timesteps = num_episodes * timesteps_per_episode
     batch_rewards = []
     batch_start_time = time.time()
-    steps = 0
     render = 0
+    steps = 0
 
     try:
         for e in range(num_episodes):
@@ -101,7 +102,6 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
             if (e + 1) % cmd_print == 0 and (e + 1) % 50 != 0:
                 end_time = time.time()
                 computing_time = (end_time - start_time)
-                steps = 0
                 if bar_bool: bar.finish()
                 print(f" -------------------- Episode: {e + 1} -------------------- \nReward: {episode_reward:.2f}, Computing time: {computing_time:.4f} s/{cmd_log} epochs")
                 start_time = time.time()
@@ -112,15 +112,18 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 print(f"Entropy: {logs['entropy']:.4f}")
                 print(f"KL Divergence: {logs['approx_kl_div']:.4f}\n")
 
-            if (e + 1) % 50 == 0:
+            if (e + 1) % N == 0:
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
                 # Save the model weights every 100 episodes
-                print(f"\n----------------------------------- {e+1}'th episode - {e+1/50}'th start-end pair -----------------------------------\n")
-                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/50 epochs\nGoal reached for start-goal pair: {env.arrived} times, Number of collisions: {env.collisions}\n")
-                print(f"Terminations casued by - Reached goals: {env.terminations[0]:.0f}, No guidance information: {env.terminations[1]:.0f}, Max steps reached: {env.terminations[2]:.0f}")
+                start_end = (e+1)/50
+                print(f"\n----------------------------------- {e+1}'th episode - {start_end}'th start-end pair -----------------------------------\n")
+                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/50 epochs\nGoal reached for start-goal pair: {env.arrived} times, Number of collisions: {env.collisions}, Steps taken in {N} epochs: {steps}\n")
+                print(f"Terminations casued by - Reached goals: {env.terminations[0]:.0f}, No guidance information: {env.terminations[1]:.0f}, Max steps reached: {env.terminations[2]:.0f}, Collisions with obstacles: {env.terminations[3]:.0f}\n")
                 # Log ppo data
                 batch_rewards = []
+                steps = 0
+                batch_start_time = time.time()
                 logs = agent.get_logs()
                 print(f"100 epoch Policy Loss: {logs['policy_loss']:.4f}")
                 print(f"100 epoch Value Loss: {logs['value_loss']:.4f}")

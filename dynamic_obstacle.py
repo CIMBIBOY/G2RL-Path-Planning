@@ -82,7 +82,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
        (inst_arr[h_new, w_new][0] == 255 and inst_arr[h_new, w_new][1] == 165 and inst_arr[h_new, w_new][2] == 0) or \
        (inst_arr[h_new, w_new][0] == 0 and inst_arr[h_new, w_new][1] == 0 and inst_arr[h_new, w_new][2] == 0):
         agent_reward += rewards_dict('1')
-        print("Reward for collision")
+        # print("Reward for collision")
         agentDone = True
         # print("Collision with obstacles or out of bounds")
         collision_count += 1
@@ -90,20 +90,20 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     else:
         if direction[0] == 0 and direction[1] == 0: 
             agent_reward += rewards_dict('0')
-            print("Reward for non global navigation")
+            # print("Reward for non global navigation")
         else:
             if global_map[h_new, w_new] == 255:
                 agent_reward += rewards_dict('0')
-                print("Reward for non global navigation")
+                # print("Reward for non global navigation")
                 cells_skipped += 1
 
             if global_map[h_new, w_new] != 255 and cells_skipped == 0:
                 agent_reward += rewards_dict('4')
-                print("Reward for staying on the global path")
+                # print("Reward for staying on the global path")
             
             if global_map[h_new, w_new] != 255 and cells_skipped > 0:
                 agent_reward += rewards_dict('2', cells_skipped)
-                print("Reward for retruning to global path")
+                # print("Reward for retruning to global path")
                 cells_skipped = 0
 
     # Calculate new distance

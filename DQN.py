@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import StepLR
 from PER import PrioritizedReplayBuffer
 
 class Agent:
-    def __init__(self, enviroment, model, total_training_steps = 180000, metal = 'cuda', batch_size = 32):
+    def __init__(self, enviroment, model, total_training_steps = 100000, metal = 'cuda', batch_size = 32):
         
         # The number of states is the number of cells in the environment
         self._state_size = enviroment.n_states
@@ -28,7 +28,7 @@ class Agent:
 
         self.device = torch.device(metal)
         self.q_network = model.to(self.device)
-        self.target_network = type(model)(30, 30, 4, 3, self.batch_size).to(self.device)
+        self.target_network = type(model)(30, 30, 4, 3).to(self.device)
 
         self.target_network.load_state_dict(self.q_network.state_dict())  # Copy weights from q_network to target_network
         self.target_network.eval()  # Set target network to evaluation mode

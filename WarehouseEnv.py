@@ -49,8 +49,7 @@ class WarehouseEnvironment:
         # Array for dynamic objects
         self.dynamic_coords = []
         self.stays = []
-        self.terminations = np.zeros(3)
-        self.collisions = 0
+        self.terminations = np.zeros(4)
         self.last_action = 4
 
         # Agent reached end position count 
@@ -73,7 +72,7 @@ class WarehouseEnvironment:
         self.steps = 0
         
         # Generate new coordinates and paths every 50 episodes
-        if self.episode_count % 50 == 1:
+        if self.episode_count % 51 == 1:
             # Initialize all dynamic obstacles
             self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
             
@@ -140,11 +139,11 @@ class WarehouseEnvironment:
 
         # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.collisions, self.stays = \
+        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.terminations[3], self.stays = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.collisions, self.stays
+            self.cells_skipped, self.dist, self.agent_goal, self.terminations[3], self.stays
         )
 
         self.agent_prev_coord = new_agent_coord

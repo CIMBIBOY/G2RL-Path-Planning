@@ -15,9 +15,9 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
     print(f"Currently running training on device: {device}")
 
     # Initialize the agent with its network
-    agent.batch_size = batch_size
     agent = Agent(env, CNNLSTMModel(30,30,4,3).to(device), total_training_steps=explore, metal = device)
-    N = 100
+    agent.batch_size = batch_size
+    N = 50
 
    # Load model weights if provided
     if model_weights_path:
@@ -33,16 +33,15 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
     all_episode_rewards = []
     all_episode_losses = []
-    batch_loss = 0
-    batch_reward = 0
     bar_steps = 0
-    batch_steps = 0
     cmd_print = cmd_log
+    batch_loss = []
+    batch_rewards = []
     batch_start_time = time.time()
     start_time = time.time()
     bar_bool = False
-    steps = 0
     render = 0
+    steps = 0
 
     try:        
         for e in range(num_episodes):
@@ -91,32 +90,29 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
                 if len(agent.expirience_replay) > agent.batch_size:
                     loss = agent.retrain()
                     episode_loss += loss
+                    batch_loss.append(loss)
                 # debug_end(stime)
                     
                 episode_reward += reward
+                batch_rewards.append(reward)
 
                 if bar_bool:
                     # Update progress bar
                     bar_steps += 1
-                    batch_steps += 1
                     if e % cmd_print < cmd_print - 1 or timestep == timesteps_per_episode - 1:
                         bar.update(bar_steps)
-        
-                steps += 1
 
-            batch_loss += episode_loss
-            batch_reward += episode_reward
-            
+                steps += 1 
+
             # Log the episode-wise metrics
             all_episode_rewards.append(episode_reward)
             all_episode_losses.append(episode_loss)
 
-            if (e + 1) % cmd_print == 0:
+            if (e + 1) % cmd_print == 0 and (e + 1) % N != 0:
                 end_time = time.time()
-                computing_time = (end_time - start_time) / steps
-                steps = 0
+                computing_time = (end_time - start_time) 
                 if bar_bool: bar.finish()
-                print(f" Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/step")
+                print(f" Episode: {e + 1}, Reward: {episode_reward:.2f}, Loss: {episode_loss:.4f}, Computing time: {computing_time:.4f} s/{cmd_log} epochs")
                 # Reset and restart progress bar
                 bar_steps = 0
                 start_time = time.time()
@@ -124,11 +120,18 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
             if (e + 1) % N == 0: 
                 batch_end_time = time.time()
                 batch_computing_time = (batch_end_time - batch_start_time) / 60
-                print(f"\n---------- {e+1}'th episode ----------\n Reward: {batch_reward:.2f}, Loss: {batch_loss:.4f}, Computing time: {batch_computing_time:.2f} min/100 epochs,  Goal reached: {env.arrived} times, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n")
-                print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}\n")
-                batch_steps = batch_loss = batch_reward = agent.rand_act = agent.netw_act = 0
+                start_end = (e+1)/50
+                print(f"\n----------------------------------- {e+1}'th episode - {start_end}'th start-end pair -----------------------------------\n")
+                print(f"Reward: {np.mean(batch_rewards):.2f},  Loss: {np.mean(batch_loss):.4f}, Computing time: {batch_computing_time:.2f} min/{N} epochs\nGoal reached for start-goal pair: {env.arrived} times, Steps taken in {N} epochs: {steps}, Random actions: {agent.rand_act}, Network actions: {agent.netw_act}\n")
                 batch_start_time = time.time()
-                
+                print(f"Terminations casued by - Reached goals: {env.terminations[0]:.0f}, No guidance information: {env.terminations[1]:.0f}, Max steps reached: {env.terminations[2]:.0f}, Collisions with obstacles: {env.terminations[3]:.0f}\n")
+                # Log ppo data
+                steps = agent.rand_act = agent.netw_act = 0
+                batch_rewards = []
+                batch_loss = []
+            
+            if (e + 1) % 1000 == 0: 
+                print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}\n")
                 # Save the model weights
                 torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}_{train_name}.pth')  # For DQN
                 
