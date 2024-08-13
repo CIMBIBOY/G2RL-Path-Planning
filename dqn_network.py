@@ -139,7 +139,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 33, save_images
 
         # Eval of Deep Q-network
         print(" ---------- Evaluating Performance ----------")
-        performance_metrics = evaluate_performance(env, agent, num_episodes=154)
+        performance_metrics = evaluate_performance(env, agent, num_episodes=200)
         print(performance_metrics)
 
     finally:
