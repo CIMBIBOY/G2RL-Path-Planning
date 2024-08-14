@@ -69,7 +69,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
 
                 # Step environment
                 next_state, agent_pos, reward, done = env.step(action)
-                print(f"Reward for current step: {reward}")
+                # print(f"Reward for current step: {reward}")
 
                 # Render the environment if enabled
                 if env.pygame_render:
@@ -118,7 +118,7 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
                 # Save the model weights every 100 episodes
                 start_end = (e+1)/50
                 print(f"\n----------------------------------- {e+1}'th episode - {start_end}'th start-end pair -----------------------------------\n")
-                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/50 epochs\nGoal reached for start-goal pair: {env.arrived} times, Number of collisions: {env.collisions}, Steps taken in {N} epochs: {steps}\n")
+                print(f"Reward: {np.mean(batch_rewards):.2f}, Computing time: {batch_computing_time:.2f} min/50 epochs\nGoal reached for start-goal pair: {env.arrived} times, Number of dynamics obstacles: {env.amr_count}, Steps taken in {N} epochs: {steps}\n")
                 print(f"Terminations casued by - Reached goals: {env.terminations[0]:.0f}, No guidance information: {env.terminations[1]:.0f}, Max steps reached: {env.terminations[2]:.0f}, Collisions with obstacles: {env.terminations[3]:.0f}\n")
                 # Log ppo data
                 batch_rewards = []

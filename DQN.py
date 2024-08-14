@@ -23,6 +23,9 @@ class Agent:
         self.gamma = 0.6
         self.epsilon_initial = 1
         self.epsilon_final = 0.1
+        # Set of thresholds where print a message is displayed
+        self.epsilon_thresholds = {0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1}
+        
         self.current_step = 0
         self.training_steps = total_training_steps
 
@@ -69,10 +72,12 @@ class Agent:
 
         # Update epsilon
         self.epsilon = self.epsilon_initial - (self.epsilon_initial - self.epsilon_final) * min(1, self.current_step / self.training_steps)
-        epsilon_final = False
-        if self.epsilon == 0.1 and epsilon_final == False:
-            print("Exploration value reached 0.1 e-greedy value")
-            epsilon_final = True
+
+        for threshold in sorted(self.epsilon_thresholds, reverse=True):
+            if self.epsilon == threshold:
+                print(f"Exploration value reached {threshold} e-greedy value")
+                self.epsilon_thresholds.remove(threshold)
+                break
 
         # take action
         if np.random.rand() <= self.epsilon or state.shape != (1,4,30,30,4):

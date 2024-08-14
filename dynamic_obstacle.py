@@ -36,7 +36,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, collision_count, stayed_array):
+def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, collision_count, stayed_array, dyn_onjects):
     
     """ 
     Update coordinates
@@ -71,6 +71,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
     # Check if the agent has reached its goal
     if (h_new, w_new) == (agent_goal[0], agent_goal[1]):
+        print(f"From start position: {agent_path[0]}")
         print(f"Agent Reached Goal: {agent_goal}")
         agentDone = True
         inst_arr[h_new, w_new] = [0, 255, 0]  # mark goal cell as green
@@ -111,8 +112,6 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     if new_dist < dist:
         dist = new_dist
 
-    if time_idx == 1:
-        stayed_array = np.zeros(20, dtype=int)
     # At reset state objects don't move
     if time_idx != 1: 
         # Update dynamic obstacles

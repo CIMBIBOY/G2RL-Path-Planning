@@ -13,7 +13,7 @@ python3 main.py --render off --method mppo --epochs 100001 --timesteps 1000 --se
 
 python3 main.py --render off --method mppo --epochs 100001 --timesteps 1000 --metal cuda --seed 7 --train retrain --model_weights weights/ppo_model_cuda_czm_hedge.pth --batch 256 --train_name czm_hedge --cmd_log 5
 
-python3 main.py --render off --method dqn --epochs 100001 --timesteps 100 --metal cuda --seed 13 --train scratch --batch 256 --train_name czm_hedge --cmd_log 5 --explore 200000
+python3 main.py --render off --method dqn --epochs 100001 --timesteps 1000 --metal cpu --seed 14 --train scratch --batch 64 --train_name czm_small --cmd_log 5 --explore 20000
 '''
 
 if __name__ == '__main__':

@@ -16,11 +16,13 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 16, agent_idx = 0, local_fov = 15, pygame_render = True):
+    def __init__(self,height = 48, width = 48, amr_count = 2, max_amr = 20, agent_idx = 0, local_fov = 15, pygame_render = True):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
         self.map_path = "data/cleaned_empty/empty-48-48-random-10_60_agents.png" 
+        # Dynamic objects start and max number
+        self.max_amr = max_amr
         self.amr_count = amr_count
         # Convert png image to array, three layers of RGB
         self.map_img_arr = np.asarray(Image.open(self.map_path))
@@ -73,6 +75,12 @@ class WarehouseEnvironment:
         
         # Generate new coordinates and paths every 50 episodes
         if self.episode_count == 0 or self.episode_count % 50 == 1:
+
+            # Implementing curriculum learning
+            if self.arrived >= 10 and self.amr_count <= self.max_amr: 
+                self.amr_count += 1
+                print(f"Dyanmic object added, current count: {self.amr_count}")
+
             # Initialize all dynamic obstacles
             self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
             
@@ -93,6 +101,7 @@ class WarehouseEnvironment:
                 self.init_arr[initial_pos[0], initial_pos[1]] = [255, 165, 0]  # Orange color for dynamic obstacles
             self.global_mapper_arr = global_guidance(self.agents_paths[self.agent_idx], self.map_img_arr.squeeze())
         
+        self.stays = np.zeros(self.amr_count, dtype=int)
         # The dynamic obstacle corresponding to agent_idx is regarded as the controlled agent
         self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]  # Take the first position of the path
         # The agent is modified to red
@@ -143,7 +152,7 @@ class WarehouseEnvironment:
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.terminations[3], self.stays
+            self.cells_skipped, self.dist, self.agent_goal, self.terminations[3], self.stays, self.amr_count
         )
 
         self.agent_prev_coord = new_agent_coord
