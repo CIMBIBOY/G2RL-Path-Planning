@@ -36,7 +36,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, collision_count, stayed_array, dyn_onjects):
+def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, terminations, stayed_array):
     
     """ 
     Update coordinates
@@ -71,12 +71,13 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
     # Check if the agent has reached its goal
     if (h_new, w_new) == (agent_goal[0], agent_goal[1]):
-        print(f"From start position: {agent_path[0]}")
-        print(f"Agent Reached Goal: {agent_goal}")
+        print(f"")
+        print(f"From start position: {agent_path[0]}, agent reached it's goal at: {agent_goal}")
         agentDone = True
         inst_arr[h_new, w_new] = [0, 255, 0]  # mark goal cell as green
         arrived = True
         agent_reward += rewards_dict('3', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]))
+        terminations[0] += 1
 
     # Check for out of bounds or collisions with obstacles
     if (h_new >= h or w_new >= w) or (h_new < 0 or w_new < 0) or \
@@ -86,7 +87,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         # print("Reward for collision")
         agentDone = True
         # print("Collision with obstacles or out of bounds")
-        collision_count += 1
+        terminations[3] += 1
         h_new, w_new = h_old, w_old
     else:
         if direction[0] == 0 and direction[1] == 0: 

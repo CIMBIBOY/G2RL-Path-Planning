@@ -148,17 +148,16 @@ class WarehouseEnvironment:
 
         # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
-        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.terminations[3], self.stays = \
+        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.terminations, self.stays = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.terminations[3], self.stays, self.amr_count
+            self.cells_skipped, self.dist, self.agent_goal, self.terminations[3], self.stays
         )
 
         self.agent_prev_coord = new_agent_coord
         if reached_goal == True:
             self.arrived += 1
-            self.terminations[0] += 1
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
