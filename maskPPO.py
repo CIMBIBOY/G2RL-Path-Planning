@@ -6,9 +6,10 @@ import numpy as np
 from train_utils import debug_start, debug_end
 
 class MaskPPOAgent:
-    def __init__(self, env, model, device='cpu', batch_size=32, mini_batch_size=8, epochs=4, gamma=0.99, gae_lambda=0.95, clip_epsilon=0.2, c1=0.5, c2=0.01, lr=3e-4):
+    def __init__(self, env, actor_model, critic_model, device='cpu', batch_size=32, mini_batch_size=8, epochs=4, gamma=0.99, gae_lambda=0.95, clip_epsilon=0.2, c1=0.5, c2=0.01, lr=3e-4):
         self.env = env
-        self.model = model
+        self.actor_model = actor_model
+        self.critic_model = critic_model
         self.device = device
         self.batch_size = batch_size
         self.mini_batch_size = mini_batch_size
@@ -18,7 +19,8 @@ class MaskPPOAgent:
         self.clip_epsilon = clip_epsilon
         self.c1 = c1  # Value function coefficient
         self.c2 = c2  # Entropy coefficient
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr, eps=1e-5)
+        self.actor_optimizer = optim.Adam(self.actor_model.parameters(), lr=lr, eps=1e-5)
+        self.critic_optimizer = optim.Adam(self.critic_model.parameters(), lr=lr, eps=1e-5)
         self.replay_buffer = PrioritizedReplayBuffer(capacity=10000)
         
         # Logging
@@ -36,7 +38,7 @@ class MaskPPOAgent:
         
         state = torch.from_numpy(state).float().to(self.device)
         with torch.no_grad():
-            action_logits, state_value = self.model(state, return_value=True)
+            action_logits, state_value = self.model(state)
             action_probs = torch.softmax(action_logits, dim=-1)
 
             mask = self.env.get_action_mask(self.device)
@@ -94,32 +96,37 @@ class MaskPPOAgent:
         if self.debug:
             print(f"Debug: Normalized advantages mean: {advantages.mean()}, std: {advantages.std()}")
 
-        action_logits, state_values = self.model(states, return_value=True)
-        new_log_probs = torch.distributions.Categorical(torch.softmax(action_logits, dim=-1)).log_prob(actions)
-        entropy = torch.distributions.Categorical(torch.softmax(action_logits, dim=-1)).entropy().mean()
+        new_action_logits = self.actor_model(states)
+        new_state_values = self.critic_model(states)
+
+        new_log_probs = torch.distributions.Categorical(torch.softmax(new_action_logits, dim=-1)).log_prob(actions)
+        entropy = torch.distributions.Categorical(torch.softmax(new_action_logits, dim=-1)).entropy().mean()
 
         ratio = torch.exp(new_log_probs - old_log_probs)
         surrogate1 = ratio * advantages
         surrogate2 = torch.clamp(ratio, 1 - self.clip_epsilon, 1 + self.clip_epsilon) * advantages
         policy_loss = -torch.min(surrogate1, surrogate2).mean()
 
-        values_clipped = old_values + (state_values - old_values).clamp(-self.clip_epsilon, self.clip_epsilon)
-        value_loss1 = (state_values - returns).pow(2)
+        values_clipped = old_values + (new_state_values - old_values).clamp(-self.clip_epsilon, self.clip_epsilon)
+        value_loss1 = (new_state_values - returns).pow(2)
         value_loss2 = (values_clipped - returns).pow(2)
-        value_loss = 0.5 * torch.max(value_loss1, value_loss2).mean()
+        value_loss = 0.5 * torch.max(value_loss1, value_loss)
 
-        loss = policy_loss + self.c1 * value_loss - self.c2 * entropy
+        total_loss = policy_loss + self.c1 * value_loss - self.c2 * entropy
 
         if self.debug:
             print(f"Debug: Policy loss: {policy_loss.item()}")
             print(f"Debug: Value loss: {value_loss.item()}")
             print(f"Debug: Entropy: {entropy.item()}")
-            print(f"Debug: Total loss: {loss.item()}")
+            print(f"Debug: Total loss: {total_loss.item()}")
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)
-        self.optimizer.step()
+        self.actor_optimizer.zero_grad()
+        self.critic_optimizer.zero_grad()
+        total_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor_model.parameters(), max_norm=0.5)
+        torch.nn.utils.clip_grad_norm_(self.critic_model.parameters(), max_norm=0.5)
+        self.actor_optimizer.step()
+        self.critic_optimizer.step()
 
         # Logging
         self.policy_losses.append(policy_loss.item())

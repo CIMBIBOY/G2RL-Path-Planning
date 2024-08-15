@@ -2,7 +2,7 @@ import numpy as np
 from WarehouseEnv import WarehouseEnvironment
 from eval import evaluate_performance
 from DQN import Agent
-from cnn import CNNLSTMModel
+from cnn import CNNLSTMActor, CNNLSTMValue
 from maskPPO import MaskPPOAgent
 import torch
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         if torch.cuda.is_available(): metal = 'cuda'
         else: metal = 'cpu'
         # Init agent with network
-        agent = MaskPPOAgent(env, CNNLSTMModel(30,30,4,3).to(metal), device= metal, batch_size= 256)
+        agent = MaskPPOAgent(env, CNNLSTMActor(30,30,4,3).to(metal), CNNLSTMValue(30,30,4,3).to(metal), device= metal, batch_size= 256)
         model_weights_path = './weights/ppo_model_cuda_czm_hedge.pth'
         # Load model weights if provided
         if model_weights_path:

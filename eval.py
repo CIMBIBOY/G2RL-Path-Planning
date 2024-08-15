@@ -108,9 +108,7 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
 
         while not done:
             if model_type == 'ppo': action, log_prob, value = agent.select_action(state)
-            elif model_type == 'dqn':
-                if steps < 5: action = random.choice(agent._action_space)
-                else: agent.act(state)
+            elif model_type == 'dqn': agent.act(state)
             step_result = env.step(action)
 
             # Ensure step_result has 4 values

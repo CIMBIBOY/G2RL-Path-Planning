@@ -11,6 +11,14 @@ from collections import deque
 import torch
 from utils import calculate_max_steps
 
+from stable_baselines3.common.atari_wrappers import (  # isort:skip
+    ClipRewardEnv,
+    EpisodicLifeEnv,
+    FireResetEnv,
+    MaxAndSkipEnv,
+    NoopResetEnv,
+)
+
 def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
@@ -152,7 +160,7 @@ class WarehouseEnvironment:
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.terminations[3], self.stays
+            self.cells_skipped, self.dist, self.agent_goal, self.terminations, self.stays
         )
 
         self.agent_prev_coord = new_agent_coord
@@ -296,7 +304,7 @@ class WarehouseEnvironment:
         return has_guidance
     
 
-    def render_video(self, train_index, image_index):
+    def render_video(self, train_name, image_index):
         assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
         # Get the most recent observation (last channel of the stacked state)
         img = Image.fromarray(self.init_arr, 'RGB')
@@ -306,11 +314,11 @@ class WarehouseEnvironment:
         os.makedirs(base_dir, exist_ok=True)
 
         # Create train_{train_index}_images directory if it does not exist
-        train_dir = os.path.join(base_dir, f"train_{train_index}_images")
+        train_dir = os.path.join(base_dir, f"train_name")
         os.makedirs(train_dir, exist_ok=True)
 
         # Save the image with a unique filename
-        img_path = os.path.join(train_dir, f"train_{train_index}_{int(image_index)}.png")
+        img_path = os.path.join(train_dir, f"{train_name}_{int(image_index)}.png")
         img.save(img_path)
 
     def render_gif(self):

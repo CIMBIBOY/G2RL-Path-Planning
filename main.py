@@ -1,75 +1,93 @@
-import argparse
+
 from WarehouseEnv import WarehouseEnvironment
 from train_utils import set_seed, print_cuda_info
 from dqn_network import dqn_training
 from q_learning import q_learning_training
 from ppo_network import ppo_training
-from parser_init import init_parser
+from parser import parse_args
 import time
 import pygame
+from torch.utils.tensorboard import SummaryWriter
+import torch
 
 '''
 python3 main.py --render off --method mppo --epochs 100001 --timesteps 1000 --seed 7 --metal cuda --train scratch  --batch 256 --train_name czm_hedge --cmd_log 5
 
 python3 main.py --render off --method mppo --epochs 100001 --timesteps 1000 --metal cuda --seed 7 --train retrain --model_weights weights/ppo_model_cuda_czm_hedge.pth --batch 256 --train_name czm_hedge --cmd_log 5
 
-python3 main.py --render off --method dqn --epochs 100001 --timesteps 1000 --metal cpu --seed 14 --train scratch --batch 64 --train_name czm_small --cmd_log 5 --explore 20000
+python3 main.py --train_name czm1 --seed 42 --method dqn --train scratch --total_timesteps 100001 --num_steps 1000 --pygame --cmd_log 5 --batch_size 64 --explore 20000
 '''
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Parser for training script of G2RL.')
-    init_parser(parser)
-    args = parser.parse_args()
+    args = parse_args()
+    run_name = f"{args.train_name}_{args.method}_{args.seed}_{int(time.time())}"
+ 
+    if args.track:
+        import wandb
 
-    # Set the seed for reproducibility
-    set_seed(args.seed)
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=vars(args),
+            name=run_name,
+            monitor_gym=True,
+            save_code=True,
+        )
+        writer = SummaryWriter(f"runs/{run_name}")
+        writer.add_text(
+            "hyperparameters",
+            "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
+        )
+
+    set_seed(args.seed, args.torch_deterministic)
+    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    print_cuda_info()
 
     pygame.init()
     time.sleep(1)
-
-    num_ep = args.epochs
-    num_timesteps = args.timesteps
-    batch = args.batch
-    train_name = args.train_name
-    cmd_log = args.cmd_log
-    exp = args.explore
-
-    if args.render == 'video': video = True
-    else: video = False
-
-    if args.render == 'pygame':
-        env = WarehouseEnvironment(pygame_render=True)
-    elif args.render == 'off':
-        env = WarehouseEnvironment(pygame_render=False)
-    else:
-        print("Render automatically set to False!")
-        env = WarehouseEnvironment(pygame_render=False)
-
+    
+    # Creating env
+    env = WarehouseEnvironment(pygame_render=args.pygame)
     _, state = env.reset()
     print(f"Input tensor dimension (state.shape): {state.shape}")
+
     if env.pygame_render:
         env.render()  
-
-    if args.metal == 'cuda':
-        metal = 'cuda'
-        print_cuda_info()  # Print CUDA info if CUDA is selected
-    elif args.metal == 'cpu':
-        metal = 'cpu'
-        print('Metal is CPU')
-    else: print('Only cpu or cuda accelaration is supported')
 
     model_weights_path = None
     if args.train == 'retrain':
         if args.model_weights is None:
-            parser.error("The --model_weights argument is required when --train is set to 'retrain'.")
+            args.error("The --model_weights argument is required when --train is set to 'retrain'.")
         model_weights_path = args.model_weights
 
+    args.cmd_log
+    args.capture_video
+
+    args.learning_rate
+    args.total_timesteps
+    args.num_steps
+    args.anneal_lr
+    args.gae
+    args.gamma
+    args.gae_lambda
+    args.update_epochs
+    args.norm_adv
+    args.clip_coef
+    args.clip_vloss
+    args.ent_coef
+    args.vf_coef
+    args.max_grad_norm
+    args.target_kl
+    args.batch_size
+    # args.minibatches
+
     if args.method == 'dqn':
-        dqn_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video, metal=metal, model_weights_path=model_weights_path, batch_size=batch, train_name=train_name, cmd_log=cmd_log, explore=exp)
+        dqn_training(env, args.total_timesteps, args.num_steps, args.capture_video, model_weights_path=model_weights_path, batch_size=args.batch_size, train_name=run_name, cmd_log=args.cmd_log, explore=args.explore)
     elif args.method == 'qnet':
-        q_learning_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video)   
+        q_learning_training(env, args.total_timesteps, args.num_steps, args.capture_video)   
     elif args.method == 'mppo': 
-        ppo_training(env, num_episodes = num_ep, timesteps_per_episode=num_timesteps, save_images = video, device=metal, model_weights_path=model_weights_path, batch_size=batch, train_name=train_name, cmd_log=cmd_log)
+        ppo_training(env, args.total_timesteps, args.num_steps, args.capture_video, model_weights_path=model_weights_path, batch_size=args.batch_size, train_name=run_name, cmd_log=args.cmd_log)
     else: print("No method choosen or type error in parsing argument! Please eaither use command: \npython main.py --method dqn \nor\n python main.py --method qnet")
 
     env.close()

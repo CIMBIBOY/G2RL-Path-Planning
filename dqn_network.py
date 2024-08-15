@@ -1,7 +1,7 @@
 import torch
 from model_summary import print_model_summary
 from DQN import Agent
-from cnn import CNNLSTMModel
+from cnn import CNNLSTMActor
 import progressbar
 import time
 from eval import evaluate_performance
@@ -9,13 +9,9 @@ import numpy as np
 from train_utils import debug_start, debug_end
 
 # DQN training script
-def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_images = False, metal = 'cpu', model_weights_path=None, batch_size = 32, train_name = 'train', cmd_log = 5, explore = 200000):
-    # Set the device to CUDA if available
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Currently running training on device: {device}")
-
+def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_images = False, device = "cpu", model_weights_path=None, batch_size = 32, train_name = 'train', cmd_log = 5, explore = 200000):
     # Initialize the agent with its network
-    agent = Agent(env, CNNLSTMModel(30,30,4,3).to(device), total_training_steps=explore, metal = device)
+    agent = Agent(env, CNNLSTMActor(30,30,4,3).to(device), explore, device)
     agent.batch_size = batch_size
     N = 50
 
@@ -131,7 +127,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
             if (e + 1) % 1000 == 0: 
                 print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}\n")
                 # Save the model weights
-                torch.save(agent.q_network.state_dict(), f'./weights/dqn_model_{metal}_{train_name}.pth')  # For DQN
+                torch.save(agent.q_network.state_dict(), f'./weights/{train_name}.pth')  # For DQN
                 
         print(" ---------- Training Finished ----------")
 
@@ -142,6 +138,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
 
     finally:
         # Save the training metrics
-        np.save(f'./models/dqn_episode_rewards_{metal}.npy', all_episode_rewards)
-        np.savez(f'./models/dqn_metrics_{metal}.npz', rewards=all_episode_rewards, losses=all_episode_losses)
+        np.save(f'./models/episode_rewards_{train_name}.npy', all_episode_rewards)
+        np.savez(f'./models/metrics_{train_name}.npz', rewards=all_episode_rewards, losses=all_episode_losses)
         

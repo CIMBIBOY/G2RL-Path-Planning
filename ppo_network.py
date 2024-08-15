@@ -2,7 +2,7 @@
 
 import torch
 import numpy as np
-from cnn import CNNLSTMModel
+from cnn import CNNLSTMActor, CNNLSTMValue
 from maskPPO import MaskPPOAgent
 from eval import evaluate_performance
 import progressbar
@@ -14,22 +14,28 @@ def ppo_training(env, num_episodes=1144, timesteps_per_episode=1000, save_images
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Currently running training on device: {device}")
 
-    # Initialize the PPO agent with its network
-    agent = MaskPPOAgent(env, CNNLSTMModel(30, 30, 4, 3).to(device), device=device, batch_size=batch_size)
+    # Initialize the actor and critic models separately
+    actor_model = CNNLSTMActor(30, 30, 4, 3).to(device)
+    critic_model = CNNLSTMValue(30, 30, 4, 3).to(device)
+
+    # Initialize the PPO agent with the separate actor and critic networks
+    agent = MaskPPOAgent(env, actor_model, critic_model, device=device, batch_size=batch_size)
     N = 50
 
     # Load model weights if provided
     if model_weights_path:
         try:
-            agent.model.load_state_dict(torch.load(model_weights_path, map_location=device, weights_only=True))
+            agent.actor_model.load_state_dict(torch.load(model_weights_path, map_location=device, weights_only=True))
+            agent.critic_model.load_state_dict(torch.load(model_weights_path, map_location=device, weights_only=True))
             print(f"Loaded model weights from: {model_weights_path}")
             time.sleep(2)
         except Exception as e:
             print(f"Error loading model weights: {e}")
             time.sleep(2)
     
-    # Print model summary
-    print_model_summary(agent.model, (batch_size, 4, 30, 30, 4), batch_size)
+    # Print model summary for both models
+    print_model_summary(agent.actor_model, (batch_size, 4, 30, 30, 4), batch_size)
+    print_model_summary(agent.critic_model, (batch_size, 4, 30, 30, 4), batch_size)
 
     all_episode_rewards = []
     bar_steps = 0

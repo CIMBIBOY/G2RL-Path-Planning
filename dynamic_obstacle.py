@@ -161,7 +161,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
 
-    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, collision_count, stayed_array
+    return np.array(local_obs), np.array(local_map), global_map, agentDone, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
 
 
 def rewards_dict(case, N = 0, path_len = 0):

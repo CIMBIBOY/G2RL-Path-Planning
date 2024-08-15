@@ -1,4 +1,4 @@
-from cnn import CNNLSTMModel
+from cnn import CNNLSTMActor
 import numpy as np
 import random
 from collections import deque
@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import StepLR
 from PER import PrioritizedReplayBuffer
 
 class Agent:
-    def __init__(self, enviroment, model, total_training_steps = 100000, metal = 'cuda', batch_size = 32):
+    def __init__(self, enviroment, model, total_training_steps = 100000, device = 'cuda', batch_size = 32):
         
         # The number of states is the number of cells in the environment
         self._state_size = enviroment.n_states
@@ -29,7 +29,7 @@ class Agent:
         self.current_step = 0
         self.training_steps = total_training_steps
 
-        self.device = torch.device(metal)
+        self.device = torch.device(device)
         self.q_network = model.to(self.device)
         self.target_network = type(model)(30, 30, 4, 3).to(self.device)
 
@@ -57,7 +57,7 @@ class Agent:
 
     def _build_compile_model(self):
         # Build initialization network model
-        model = CNNLSTMModel(48,48,4,3)
+        model = CNNLSTMActor(30,30,4,3)
         return model
 
     def align_target_model(self):
@@ -86,7 +86,7 @@ class Agent:
             # print(f"random action: {action}")
             return action
         
-        q_values = self.q_network.forward(state_tensor, False)
+        q_values = self.q_network.forward(state_tensor)
         # Move the tensor to CPU before converting to numpy
         m_action = np.argmax(q_values[0].cpu().detach().numpy())
         self.netw_act += 1

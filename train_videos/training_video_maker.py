@@ -4,10 +4,10 @@ import re
 
 def create_video_from_images(image_folder, train_number, video_name='train_x_video.avi', fps=5, codec='MJPG', scale=50):
     # Get list of all image filenames in the folder
-    images = [img for img in os.listdir(image_folder) if img.endswith(".png") and f'train_{train_number}_' in img]
+    images = [img for img in os.listdir(image_folder) if img.endswith(".png") and f'{train_number}_' in img]
     
     # Sort images by the second part of their filename
-    images.sort(key=lambda x: int(re.search(r'train_\w+_(\d+).png', x).group(1)))
+    images.sort(key=lambda x: int(re.search(r'\w+_\w+_\d+_\d+_(\d+).png', x).group(1)))
     
     if not images:
         print(f"No images found for train number {train_number}.")
@@ -39,6 +39,6 @@ def create_video_from_images(image_folder, train_number, video_name='train_x_vid
     cv2.destroyAllWindows()
 
 # Generate video
-training_index = 'czm_ppo'
+train_name = 'czm1_mppo_42_114811'
 
-create_video_from_images(f'training_images/train_{training_index}_images', training_index, f'train_{training_index}_video.avi', fps=7, codec='MJPG', scale=10)
+create_video_from_images(f'training_images/{train_name}', train_name, f'{train_name}.avi', fps=7, codec='MJPG', scale=10)
