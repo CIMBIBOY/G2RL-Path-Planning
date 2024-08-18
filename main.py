@@ -11,11 +11,12 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 
 '''
-python3 main.py --render off --method mppo --epochs 100001 --timesteps 1000 --seed 7 --metal cuda --train scratch  --batch 256 --train_name czm_hedge --cmd_log 5
+python3 main.py --train_name czm1 --seed 42 --method dqn --train scratch --total_timesteps 100001 --num_steps 1000 --pygame --cmd_log 5 --explore 20000
 
-python3 main.py --render off --method mppo --epochs 100001 --timesteps 1000 --metal cuda --seed 7 --train retrain --model_weights weights/ppo_model_cuda_czm_hedge.pth --batch 256 --train_name czm_hedge --cmd_log 5
+python3 main.py --train_name czm1 --seed 37 --method mppo --train scratch --total_timesteps 100000 --num_steps 128 --pygame --cmd_log 5 --learning_rate 3e-5
 
-python3 main.py --train_name czm1 --seed 42 --method dqn --train scratch --total_timesteps 100001 --num_steps 1000 --pygame --cmd_log 5 --batch_size 64 --explore 20000
+python3 main.py --train_name czm1 --seed 37 --method dqn --train scratch --total_timesteps 100000 --num_steps 1000 --pygame --cmd_log 5 --batch 64 --explore 20000
+
 '''
 
 if __name__ == '__main__':
@@ -61,33 +62,12 @@ if __name__ == '__main__':
             args.error("The --model_weights argument is required when --train is set to 'retrain'.")
         model_weights_path = args.model_weights
 
-    args.cmd_log
-    args.capture_video
-
-    args.learning_rate
-    args.total_timesteps
-    args.num_steps
-    args.anneal_lr
-    args.gae
-    args.gamma
-    args.gae_lambda
-    args.update_epochs
-    args.norm_adv
-    args.clip_coef
-    args.clip_vloss
-    args.ent_coef
-    args.vf_coef
-    args.max_grad_norm
-    args.target_kl
-    args.batch_size
-    # args.minibatches
-
     if args.method == 'dqn':
-        dqn_training(env, args.total_timesteps, args.num_steps, args.capture_video, model_weights_path=model_weights_path, batch_size=args.batch_size, train_name=run_name, cmd_log=args.cmd_log, explore=args.explore)
+        dqn_training(env, args.total_timesteps, args.num_steps, args.capture_video, model_weights_path=model_weights_path, batch_size=args.batch, train_name=run_name, cmd_log=args.cmd_log, explore=args.explore)
     elif args.method == 'qnet':
         q_learning_training(env, args.total_timesteps, args.num_steps, args.capture_video)   
-    elif args.method == 'mppo': 
-        ppo_training(env, args.total_timesteps, args.num_steps, args.capture_video, model_weights_path=model_weights_path, batch_size=args.batch_size, train_name=run_name, cmd_log=args.cmd_log)
+    if args.method == 'mppo':
+        agent = ppo_training(env, args)  
     else: print("No method choosen or type error in parsing argument! Please eaither use command: \npython main.py --method dqn \nor\n python main.py --method qnet")
 
     env.close()

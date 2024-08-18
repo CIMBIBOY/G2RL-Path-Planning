@@ -10,3 +10,4 @@ argparse
 keyboard
 stable_baselines3
 tensorboard
+gym

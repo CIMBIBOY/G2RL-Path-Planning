@@ -1,7 +1,7 @@
 import torch
-from model_summary import print_model_summary
+from model_summary import print_model_summary_dqn
 from DQN import Agent
-from cnn import CNNLSTMActor
+from cnn_for_dqn import CNNLSTMActor
 import progressbar
 import time
 from eval import evaluate_performance
@@ -25,7 +25,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
             print(f"Error loading model weights: {e}")
             time.sleep(2)
     
-    print_model_summary(agent.q_network, (batch_size, 4, 30, 30, 4), batch_size)
+    print_model_summary_dqn(agent.q_network, (batch_size, 4, 30, 30, 4), batch_size)
 
     all_episode_rewards = []
     all_episode_losses = []
@@ -61,7 +61,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
                 # Compute action
                 action = agent.act(state)
                 # Step the environment
-                next_state, _, reward, terminated = env.step(action)
+                next_state, _, reward, done, info = env.step(action)
 
                 # Render the environment if it's enabled
                 if env.pygame_render:
@@ -74,7 +74,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
                 if state.shape != (1, 1, 30, 30, 4): 
                     agent.store(state, action, reward, next_state, terminated)
                 
-                if terminated:
+                if done.item() == 1 or info:
                     agent.align_target_model()
                     break
                 

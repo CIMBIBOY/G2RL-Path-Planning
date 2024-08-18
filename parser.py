@@ -16,16 +16,16 @@ def parse_args():
     parser.add_argument('--model_weights', type=str, default=None,
         help='Path to the model weights file (required if --train is set to retrain).')
     
+    parser.add_argument("--num_envs", type=int, default=1,
+        help="the number of environments running in parallel")
     parser.add_argument("--learning_rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
     parser.add_argument("--total_timesteps", type=int, default=25000,
         help="total timesteps of the experiments")
-    parser.add_argument("--batch_size", type=int, default=32,
-        help="the number of processing batches")
     
     parser.add_argument("--torch_deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="if toggled, `torch.backends.cudnn.deterministic=False`")
-    parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
+    parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="if toggled, cuda will be enabled by default")
     
     parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
@@ -53,7 +53,7 @@ def parse_args():
         help="the discount factor gamma")
     parser.add_argument("--gae_lambda", type=float, default=0.95,
         help="the lambda for the general advantage estimation")
-    parser.add_argument("--num_minibatches", type=int, default=4,
+    parser.add_argument("--num_minibatches", type=int, default=1,
         help="the number of mini_batches")
     parser.add_argument("--update_epochs", type=int, default=4,
         help="the K epochs to update the policy")
@@ -75,11 +75,12 @@ def parse_args():
     # Q-Learning 
     parser.add_argument('--explore', type=int, default=200000, 
         help='Set exploration steps for e-greedy decay for q-network')
+    parser.add_argument('--batch', type=int, default=32, 
+        help='Set batch for q-network')
     
     args = parser.parse_args()
 
-    if args.method == 'mppo':
-        args.minibatch_size = int(args.batch_size // args.num_minibatches)
+    args.batch_size = int(args.num_envs * args.num_steps)
 
     # fmt: on
     return args

@@ -1,4 +1,4 @@
-from cnn import CNNLSTMActor
+from cnn_for_dqn import CNNLSTMActor
 import numpy as np
 import random
 from collections import deque
@@ -13,7 +13,7 @@ class Agent:
         
         # The number of states is the number of cells in the environment
         self._state_size = enviroment.n_states
-        self._action_space = enviroment.action_space()
+        self._action_space = enviroment.f_action_space()
         self._action_size = enviroment.n_actions
         # Experience replay pool
         self.batch_size = batch_size

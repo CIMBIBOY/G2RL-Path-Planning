@@ -10,6 +10,7 @@ import pygame
 from collections import deque
 import torch
 from utils import calculate_max_steps
+from gym.spaces import Box, Discrete
 
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
@@ -39,8 +40,12 @@ class WarehouseEnvironment:
         self.width = width
         # state space dimension
         self.n_states = height * width
+        # observation space
+        self.observation_space = Box(low=0, high=255, shape=(4, 30, 30, 4), dtype=np.uint8)
         # action space dim
-        self.n_actions = len(self.action_space())
+        self.n_actions = len(self.f_action_space())
+        # Define action space
+        self.action_space = Discrete(self.n_actions)
         # Number of historical observations to use
         self.Nt = 4 
         self.initial_random_steps = 0
@@ -137,7 +142,13 @@ class WarehouseEnvironment:
         self.initial_random_steps = 0
 
         # Take initial step to get the first real observation
-        graphical_state, _, _, _ = self.step(4)  # Assuming 4 is a valid initial action
+        graphical_state, _, _, _, _ = self.step(4)  # Assuming 4 is a valid initial action
+        self.time_idx -= 1
+        graphical_state, _, _, _, _ = self.step(4)
+        self.time_idx -= 1
+        graphical_state, _, _, _, _ = self.step(4)
+        self.time_idx -= 1
+        graphical_state, _, _, _, _ = self.step(4)
 
         return start[0] * start[1], graphical_state
 
@@ -155,7 +166,7 @@ class WarehouseEnvironment:
         self.time_idx += 1
 
         # Update coordinates 
-        local_obs, local_map, self.global_mapper_arr, isAgentDone, rewards, \
+        local_obs, local_map, self.global_mapper_arr, agentDone, isAgentInfo, rewards, \
         self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.terminations, self.stays = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
@@ -169,12 +180,12 @@ class WarehouseEnvironment:
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
-            isAgentDone = True 
+            isAgentInfo = True 
             self.terminations[1] += 1
 
         if self.steps > self.max_step:
             # print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
-            isAgentDone = True 
+            isAgentInfo = True 
             self.terminations[2] += 1
 
         combined_arr = np.array([])
@@ -196,11 +207,11 @@ class WarehouseEnvironment:
 
         if self.initial_random_steps < self.Nt:
             # Return the single observation during initial steps
-            return_values = (combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone)
+            return_values = (combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, agentDone, isAgentInfo)
         else:
             # Return the stacked state after we have enough observations
             stacked_state = self.get_stacked_state()
-            return_values = (stacked_state, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, isAgentDone)
+            return_values = (stacked_state, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, agentDone, isAgentInfo)
         
         return return_values
     
@@ -404,7 +415,7 @@ class WarehouseEnvironment:
         else:
             pass
 
-    def action_space(self):
+    def f_action_space(self):
         # action space
         self.action_dict = {
             0:['up',0,1],

@@ -60,17 +60,17 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
     Returns:
         dict: A dictionary containing the performance metrics.
     """
-    # Ensure the evaluation folder exists
+
     os.makedirs(eval_folder, exist_ok=True)
 
     total_moving_cost = 0
     total_detour_percentage = 0
     total_computing_time = 0
     failed_paths = 0
+    total_reward = 0
 
     for episode in range(num_episodes):
         _, state = env.reset()
-
         start_cell = env.dynamic_coords[env.agent_idx][0]
         end_cell = env.dynamic_coords[env.agent_idx][-1]
 
@@ -78,8 +78,6 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         print(f"Episode {episode + 1}/{num_episodes}")
         
         value_map = map_to_value(env.init_arr.squeeze())
-
-        print(f"Pathfinding input - Start: {start_cell}, End: {end_cell}")
         optimal_path, _ = find_path(value_map, start_cell, end_cell)
       
         if optimal_path == 'fail':
@@ -91,41 +89,28 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
             optimal_path_length = len(optimal_path_coords)
             print(f"Optimal path length: {optimal_path_length}")
 
-            # Debug zero path length bug
-            if optimal_path_length == 0: 
-                print(f"Optimal path: {optimal_path}")
-                print(f"Optimal path coords: {optimal_path_coords}")
-                print(f"Value_map: {value_map}")
-                print(f"Start cell: {start_cell}, end cell: {end_cell}")
-                print(f"Initial array: {env.init_arr}")
-                print(f"Optimal path length: {optimal_path_length}")
-            
-
         done = False
         steps = 0
         path = []
+        episode_reward = 0
         start_time = time.time()
 
+        # Initialize LSTM state
+        lstm_state = agent.init_lstm_states(1)
+        
         while not done:
-            if model_type == 'ppo': action, log_prob, value = agent.select_action(state)
-            elif model_type == 'dqn': agent.act(state)
-            step_result = env.step(action)
-
-            # Ensure step_result has 4 values
-            if len(step_result) != 4:
-                raise ValueError(f"Unexpected step result: {step_result}")
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
+            with torch.no_grad():
+                action, _, _, _, lstm_state = agent.model.get_action_and_value(
+                    state_tensor, lstm_state, torch.zeros(1).to(agent.device), env, agent.device
+                )
             
-            next_state, cell, reward, done = step_result
+            action = action.cpu().numpy().item()
+            next_state, cell, reward, done = env.step(action)
 
-            # Handle cases where any of the step results are None
-            if next_state is None or cell is None or reward is None:
-                print(f"Warning: Step result contains None. Ending episode.")
-                break
-
-            if model_type == 'ppo': agent.store(state, action, reward, next_state, done, log_prob, value)
-            elif model_type == 'dqn': agent.store(state, action, reward, next_state, done)
             state = next_state
             steps += 1
+            episode_reward += reward
 
             cell = env.agent_prev_coord
             path.append(cell)
@@ -133,21 +118,9 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         end_time = time.time()
         computing_time = (end_time - start_time) / steps
 
-        # Calculate Moving Cost
-        if not isinstance(start_cell, list):
-            print(f"Warning: start_cell: {start_cell} is not a list")   
+        manhattan_distance = abs(cell[0] - start_cell[0]) + abs(cell[1] - start_cell[1])
+        moving_cost = steps / (manhattan_distance + 1e-7) if manhattan_distance != 0 else 0
 
-        if isinstance(cell, (list, tuple)):
-            manhattan_distance = abs(cell[0] - start_cell[0]) + abs(cell[1] - start_cell[1])
-        else:
-            manhattan_distance = 0
-
-        if manhattan_distance != 0:
-            moving_cost = steps / (manhattan_distance + 1e-7)
-        else:
-            moving_cost = 0
-
-        # Calculate Detour Percentage
         if optimal_path_length > 0:
             detour_percentage = ((steps - optimal_path_length) / optimal_path_length * 100)
         else:
@@ -157,6 +130,7 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         total_moving_cost += moving_cost
         total_detour_percentage += detour_percentage
         total_computing_time += computing_time
+        total_reward += episode_reward
 
         print(f"Episode {episode + 1} completed:")
         print(f"  Steps taken: {steps}")
@@ -164,16 +138,31 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         print(f"  Moving cost: {moving_cost:.4f}")
         print(f"  Detour percentage: {detour_percentage:.2f}%")
         print(f"  Computing time: {computing_time:.4f} s/step")
+        print(f"  Episode reward: {episode_reward:.2f}")
         print(f"  Failed paths so far: {failed_paths}")
         print(f"  Reached goals so far: {env.arrived}")
 
         # Save the evaluation image
         save_evaluation_image(env.init_arr, start_cell, end_cell, path, optimal_path_coords, episode, eval_folder)
 
+    avg_reward = total_reward / num_episodes
+    avg_moving_cost = total_moving_cost / num_episodes
+    avg_detour_percentage = total_detour_percentage / num_episodes
+    avg_computing_time = total_computing_time / num_episodes
+
+    print("\nEvaluation Results:")
+    print(f"Average Reward: {avg_reward:.2f}")
+    print(f"Average Moving Cost: {avg_moving_cost:.4f}")
+    print(f"Average Detour Percentage: {avg_detour_percentage:.2f}%")
+    print(f"Average Computing Time: {avg_computing_time:.4f} s/step")
+    print(f"Total Failed Paths: {failed_paths}")
+    print(f"Total Goals Reached: {env.arrived}")
+
     return {
-        "moving_cost": total_moving_cost / num_episodes,
-        "detour_percentage": total_detour_percentage / num_episodes,
-        "computing_time": total_computing_time / num_episodes,
+        "avg_reward": avg_reward,
+        "moving_cost": avg_moving_cost,
+        "detour_percentage": avg_detour_percentage,
+        "computing_time": avg_computing_time,
         "failed_paths": failed_paths,
         "agent_reached_goal": env.arrived
     }
