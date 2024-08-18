@@ -13,7 +13,7 @@ import torch
 '''
 python3 main.py --train_name czm1 --seed 42 --method dqn --train scratch --total_timesteps 100001 --num_steps 1000 --pygame --cmd_log 5 --explore 20000
 
-python3 main.py --train_name czm1 --seed 37 --method mppo --train scratch --total_timesteps 100000 --num_steps 128 --pygame --cmd_log 5 --learning_rate 3e-5
+python3 main.py --train_name czm1 --seed 31 --method mppo --train scratch --total_timesteps 100000 --num_steps 256 --cmd_log 5 --learning_rate 3e-5
 
 python3 main.py --train_name czm1 --seed 37 --method dqn --train scratch --total_timesteps 100000 --num_steps 1000 --pygame --cmd_log 5 --batch 64 --explore 20000
 

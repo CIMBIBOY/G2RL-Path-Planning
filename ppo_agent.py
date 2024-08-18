@@ -164,7 +164,7 @@ class PPOAgent(nn.Module):
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
                 next_obs, next_done = torch.Tensor(next_obs).to(self.device), torch.Tensor(done).to(self.device)
 
-                if self.args.pygame_render:
+                if self.args.pygame:
                     # Render the environment
                     self.env.render()
 
