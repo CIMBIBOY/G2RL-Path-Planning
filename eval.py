@@ -3,8 +3,10 @@ import time
 from map_generator import map_to_value
 from global_mapper import find_path, return_path
 import os
-import random
 import matplotlib.pyplot as plt
+import torch
+from ppo_agent import PPOAgent
+from cnn_for_ppo import CNNLSTM
 
 def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode, eval_folder='G2RL-Path-Planning/eval_images'):
     """
@@ -12,7 +14,7 @@ def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode
 
     Args:
         init_arr (numpy.ndarray): The initial environment array (48x48).
-        start (tuple): The start position (x, y).
+        start (tuple): The start posityyyyyion (x, y).
         end (tuple): The end position (x, y).
         agent_path (list): List of coordinates representing the agent's path.
         a_star_path (list): List of coordinates representing the optimal path.
@@ -47,7 +49,7 @@ def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode
     plt.savefig(os.path.join(eval_folder, f'episode_{episode + 1}_eval.png'))
     plt.close()
 
-def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images", model_type = 'ppo'):
+def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eval_images"):
     """
     Evaluates the performance of the agent in the WarehouseEnvironment.
 
@@ -60,6 +62,10 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
     Returns:
         dict: A dictionary containing the performance metrics.
     """
+
+    device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+    model = CNNLSTM().to(device)
+    agent = PPOAgent(env, model, args, run_name)
 
     os.makedirs(eval_folder, exist_ok=True)
 
@@ -75,7 +81,7 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         end_cell = env.dynamic_coords[env.agent_idx][-1]
 
         assert start_cell != end_cell, "Start and end cells are the same"
-        print(f"Episode {episode + 1}/{num_episodes}")
+        print(f" ---------- Episode {episode + 1}/{num_episodes} ---------- ")
         
         value_map = map_to_value(env.init_arr.squeeze())
         optimal_path, _ = find_path(value_map, start_cell, end_cell)
@@ -89,7 +95,7 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
             optimal_path_length = len(optimal_path_coords)
             print(f"Optimal path length: {optimal_path_length}")
 
-        done = False
+        done = np.zeros(1)
         steps = 0
         path = []
         episode_reward = 0
@@ -99,14 +105,14 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         lstm_state = agent.init_lstm_states(1)
         
         while not done:
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
+            state_tensor = torch.FloatTensor(state).to(agent.device)
             with torch.no_grad():
                 action, _, _, _, lstm_state = agent.model.get_action_and_value(
                     state_tensor, lstm_state, torch.zeros(1).to(agent.device), env, agent.device
                 )
             
             action = action.cpu().numpy().item()
-            next_state, cell, reward, done = env.step(action)
+            next_state, cell, reward, done, info = env.step(action)
 
             state = next_state
             steps += 1
@@ -114,6 +120,11 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
 
             cell = env.agent_prev_coord
             path.append(cell)
+
+            if done:
+                print("Episode finished. Info:")
+                for key, value in info.items():
+                    print(f"  {key}: {value}")
 
         end_time = time.time()
         computing_time = (end_time - start_time) / steps
@@ -141,6 +152,7 @@ def evaluate_performance(env, agent, num_episodes=100, eval_folder="eval_images"
         print(f"  Episode reward: {episode_reward:.2f}")
         print(f"  Failed paths so far: {failed_paths}")
         print(f"  Reached goals so far: {env.arrived}")
+        print(f"  ----------------------------------------\n")
 
         # Save the evaluation image
         save_evaluation_image(env.init_arr, start_cell, end_cell, path, optimal_path_coords, episode, eval_folder)

@@ -8,12 +8,12 @@ from eval import evaluate_performance
 import time
 from model_summary import print_model_summary_ppo
 
-def ppo_training(env, args):
+def ppo_training(env, args, train_name):
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     print(f"Currently running training on device: {device}")
 
     model = CNNLSTM().to(device)
-    agent = PPOAgent(env, model, args)
+    agent = PPOAgent(env, model, args, train_name)
 
     if args.model_weights:
         try:
@@ -34,7 +34,7 @@ def ppo_training(env, args):
     print(f"Final Value Loss: {v_loss:.4f}")
     print(f"Final Entropy: {entropy_loss:.4f}")
     print(f"Final KL Divergence: {approx_kl:.4f}")
-    torch.save(agent.state_dict(), f'./weights/{args.train_name}.pth')
+    torch.save(agent.state_dict(), f'./weights/{train_name}.pth')
 
     print(" ---------- Training Finished ----------")
 

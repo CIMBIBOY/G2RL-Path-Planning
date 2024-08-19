@@ -141,6 +141,16 @@ class WarehouseEnvironment:
         self.observation_history.clear()
         self.initial_random_steps = 0
 
+        self.info = {
+            'timeout': False,
+            'no_global_guidance': False,
+            'goal_reached': False,
+            'collision': False,
+            'steps': 0,
+            # 'path': [],
+            'reward': 0,
+        }
+
         # Take initial step to get the first real observation
         graphical_state, _, _, _, _ = self.step(4)  # Assuming 4 is a valid initial action
         self.time_idx -= 1
@@ -153,7 +163,6 @@ class WarehouseEnvironment:
         return start[0] * start[1], graphical_state
 
     def step(self, action):
-        self.steps += 1
         if len(self.init_arr) == 0:
             print("Run env.reset() first")
             return None, None, None, False
@@ -166,26 +175,36 @@ class WarehouseEnvironment:
         self.time_idx += 1
 
         # Update coordinates 
-        local_obs, local_map, self.global_mapper_arr, agentDone, isAgentInfo, rewards, \
+        local_obs, local_map, self.global_mapper_arr, done, self.info, rewards, \
         self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.terminations, self.stays = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.terminations, self.stays
+            self.cells_skipped, self.dist, self.agent_goal, self.terminations, self.stays, self.info
         )
 
+        self.steps += 1
         self.agent_prev_coord = new_agent_coord
+
+         # Update info
+        self.info['steps'] += 1
+        # self.info['path'].append((self.agent_prev_coord[0], self.agent_prev_coord[1]))
+        self.info['reward'] += rewards
+
+        
         if reached_goal == True:
             self.arrived += 1
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
-            isAgentInfo = True 
+            done = True
+            self.info['no_global_guidance'] = True
             self.terminations[1] += 1
 
         if self.steps > self.max_step:
             # print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
-            isAgentInfo = True 
+            done = True
+            self.info['timeout'] = True
             self.terminations[2] += 1
 
         combined_arr = np.array([])
@@ -207,11 +226,11 @@ class WarehouseEnvironment:
 
         if self.initial_random_steps < self.Nt:
             # Return the single observation during initial steps
-            return_values = (combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, agentDone, isAgentInfo)
+            return_values = (combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, done, self.info)
         else:
             # Return the stacked state after we have enough observations
             stacked_state = self.get_stacked_state()
-            return_values = (stacked_state, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, agentDone, isAgentInfo)
+            return_values = (stacked_state, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, done, self.info)
         
         return return_values
     

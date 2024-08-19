@@ -2,9 +2,10 @@ import numpy as np
 from WarehouseEnv import WarehouseEnvironment
 from eval import evaluate_performance
 from DQN import Agent
-from cnn import CNNLSTMActor, CNNLSTMValue
-from maskPPO import MaskPPOAgent
+from cnn_for_ppo import CNNLSTM
+from ppo_agent import PPOAgent
 import torch
+from parser import parse_args
 
 def get_dimensions(nested_list):
     if isinstance(nested_list, list):
@@ -26,6 +27,9 @@ def test_agent(env, agent, num_episodes=50):
 
 if __name__ == '__main__':
     try:
+        args = parse_args()
+        run_name = f"{args.train_name}_{args.method}_{args.seed}_{int(time.time())}"
+ 
         # Set up the environment
         env = WarehouseEnvironment(pygame_render = True)
         _, state = env.reset() # image of first reset
@@ -45,10 +49,11 @@ if __name__ == '__main__':
         # Set up the agent
         state_size = env.n_states
         action_size = env.n_actions
-        if torch.cuda.is_available(): metal = 'cuda'
-        else: metal = 'cpu'
+
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # Init agent with network
-        agent = MaskPPOAgent(env, CNNLSTMActor(30,30,4,3).to(metal), CNNLSTMValue(30,30,4,3).to(metal), device= metal, batch_size= 256)
+        model = CNNLSTM().to(device)
+        agent = PPOAgent(env, model, args, train_name)
         model_weights_path = './weights/ppo_model_cuda_czm_hedge.pth'
         # Load model weights if provided
         if model_weights_path:

@@ -67,10 +67,8 @@ class CNNLSTM(nn.Module):
         hidden = self.flatten(x)
         if debug:
             print(f"Hidden shape after flatten: {hidden.shape}")
-
-        # Reshape hidden to be (batch_size, sequence_length, input_size)
-        if debug:
             print(f"Batch_size: {batch_size}")
+        # Reshape hidden to be (batch_size, sequence_length, input_size)
         hidden = hidden.reshape(batch_size, nt, self.lstm.input_size)
         if debug:
             print(f"Hidden shape after reshape: {hidden.shape}")

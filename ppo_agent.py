@@ -7,11 +7,12 @@ import numpy as np
 import time
 
 class PPOAgent(nn.Module):
-    def __init__(self, env, model, args):
+    def __init__(self, env, model, args, run_name):
         super().__init__()
         self.env = env
         self.model = model
         self.args = args
+        self.run_name = run_name
         self.device = torch.device("cuda" if args.cuda else "cpu")
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.learning_rate, eps=1e-5)
@@ -23,12 +24,14 @@ class PPOAgent(nn.Module):
         }, path)
 
     def load(self, path):
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location = self.device, weights_only=True)
+        print(checkpoint.keys())
         self.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     def load_model_only(self, path):
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location = self.device, weights_only=True)
+        print(checkpoint.keys())
         self.load_state_dict(checkpoint['model_state_dict'])
     
     def update(self, obs, actions, logprobs, advantages, returns, values, init_lstm, dones):
@@ -135,6 +138,8 @@ class PPOAgent(nn.Module):
         print(f"next_lstm_state shape: {[state.shape for state in next_lstm_state]}")
         '''
         start_time = time.time()
+        steps = 0
+        batch_rewards = []
 
         for update in range(1, num_updates + 1):
             initial_lstm_state = (next_lstm_state[0].clone(), next_lstm_state[1].clone())
@@ -161,20 +166,23 @@ class PPOAgent(nn.Module):
 
                 # print(action.cpu().numpy())
                 next_obs, position, reward, done, info = self.env.step(action.cpu().numpy().item())
+                steps += 1
+                batch_rewards.append(reward)
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
-                next_obs, next_done = torch.Tensor(next_obs).to(self.device), torch.Tensor(done).to(self.device)
+                next_obs = torch.Tensor(next_obs).to(self.device)
+                next_done = torch.tensor([done], dtype=torch.float32).to(self.device)
 
                 if self.args.pygame:
                     # Render the environment
                     self.env.render()
 
                 # Reset LSTM states for done episodes
-                if done.item() == 1:
+                if done:
+                    print("Episode finished. Info:")
+                    for key, value in info.items():
+                        print(f"  {key}: {value}")
                     self.env.reset()
-                
-                if info:
-                    self.env.reset()
-                    break
+                    break   
 
             # bootstrap value if not done
             with torch.no_grad():
@@ -224,15 +232,20 @@ class PPOAgent(nn.Module):
                 end_time = time.time()
                 computing_time = end_time - start_time
                 print(f" -------------------- Update: {update} -------------------- ")
+                print(f"Reward: {np.mean(batch_rewards):.4f}")
                 print(f"Policy Loss: {pg_loss:.4f}")
                 print(f"Value Loss: {v_loss:.4f}")
                 print(f"Entropy: {entropy_loss:.4f}")
                 print(f"KL Divergence: {approx_kl:.4f}")
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
+                print(f"Steps taken in {update} update: {steps}")
+                print(f"Terminations casued by:\nReached goals: {self.env.terminations[0]:.0f}, No guidance information: {self.env.terminations[1]:.0f}, Max steps reached: {self.env.terminations[2]:.0f}, Collisions with obstacles: {self.env.terminations[3]:.0f}\n")
                 start_time = time.time()
+                steps = 0
+                batch_rewards = []
 
             if update % self.args.cmd_log * 10 == 0:
-                self.save(f'./weights/{self.args.train_name}.pth')
+                self.save(f'./weights/{self.run_name}.pth')
 
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:

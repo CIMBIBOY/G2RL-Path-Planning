@@ -36,7 +36,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, terminations, stayed_array):
+def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, terminations, stayed_array, info):
     
     """ 
     Update coordinates
@@ -58,8 +58,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     # Get the path of the agent
     agent_path = coords[agent]
 
-    agentDone = np.zeros(1)
-    agentInfo = False
+    done = False
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
     h_new, w_new = h_old + direction[0], w_old - direction[1]
 
@@ -74,7 +73,8 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     if (h_new, w_new) == (agent_goal[0], agent_goal[1]):
         print(f"")
         print(f"From start position: {agent_path[0]}, agent reached it's goal at: {agent_goal}")
-        agentDone += 1
+        done = True
+        info['goal_reached'] = True
         inst_arr[h_new, w_new] = [0, 255, 0]  # mark goal cell as green
         arrived = True
         agent_reward += rewards_dict('3', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]))
@@ -86,7 +86,8 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
        (inst_arr[h_new, w_new][0] == 0 and inst_arr[h_new, w_new][1] == 0 and inst_arr[h_new, w_new][2] == 0):
         agent_reward += rewards_dict('1')
         # print("Reward for collision")
-        agentInfo = True
+        done = True
+        info['collision'] = True
         # print("Collision with obstacles or out of bounds")
         terminations[3] += 1
         h_new, w_new = h_old, w_old
@@ -152,7 +153,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
                 # coords[idx] = path    
         
     # Update agent position after moving obstacles
-    if not agentDone:
+    if not done:
         # Clear the previous agent position
         inst_arr[h_old, w_old] = [255, 255, 255]
         inst_arr[h_new, w_new] = [255, 0, 0]
@@ -162,7 +163,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
 
-    return np.array(local_obs), np.array(local_map), global_map, agentDone, agentInfo, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
+    return np.array(local_obs), np.array(local_map), global_map, done, info, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
 
 
 def rewards_dict(case, N = 0, path_len = 0):

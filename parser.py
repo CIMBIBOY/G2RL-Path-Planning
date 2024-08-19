@@ -5,9 +5,14 @@ def parse_args():
     # fmt: off
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_name', type=str, default='train', 
-        help='Specifiy the name of the current train')
+        help='Specifiy the name of the current train.')
     parser.add_argument('--seed', type=int, default=42, 
         help='Random seed for reproducibility.')
+   
+    parser.add_argument("--eval", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
+        help="if toggled, runtime is performance evaluation from existing model weights.")
+    parser.add_argument('--eval_steps', type=int, default=100, 
+        help='Define the number of timesteps the agent will be evaluated for.')
     
     parser.add_argument('--method', type=str, choices=['dqn', 'qnet', 'mppo'], default='dqn',
         help='Choose the training method: deep Q-network, traditional Q-network or masked PPO agent')
@@ -20,7 +25,7 @@ def parse_args():
         help="the number of environments running in parallel")
     parser.add_argument("--learning_rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
-    parser.add_argument("--total_timesteps", type=int, default=25000,
+    parser.add_argument("--total_timesteps", type=int, default=128000,
         help="total timesteps of the experiments")
     
     parser.add_argument("--torch_deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
