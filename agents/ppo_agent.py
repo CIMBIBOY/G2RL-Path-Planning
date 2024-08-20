@@ -242,10 +242,10 @@ class PPOAgent(nn.Module):
                 mean_terminations_rg = mean_terminations_gi = mean_terminations_ms = mean_terminations_oc = np.zeros(4)
 
                 for i in range(self.args.num_envs):
-                    mean_terminations_rg[i] += self.env.envs[i].terminations[0]
-                    mean_terminations_rg[1] += self.env.envs[i].terminations[1]
-                    mean_terminations_rg[i] += self.env.envs[i].terminations[2]
-                    mean_terminations_rg[i] += self.env.envs[i].terminations[3]
+                    mean_terminations_rg[i] = self.env.envs[i].terminations[0]
+                    mean_terminations_rg[1] = self.env.envs[i].terminations[1]
+                    mean_terminations_rg[i] = self.env.envs[i].terminations[2]
+                    mean_terminations_rg[i] = self.env.envs[i].terminations[3]
 
                 end_time = time.time()
                 computing_time = end_time - start_time
@@ -277,12 +277,9 @@ class PPOAgent(nn.Module):
                         "Reached goals": int(np.mean(mean_terminations_rg)), 
                         "Lost guidance information": int(np.mean(mean_terminations_gi)), 
                         "Max steps reached": int(np.mean(mean_terminations_ms)),
-                        "Collisions with obstacles": int(np.mean(mean_terminations_oc))
-                    }, step=global_step)
-
-            if update % (self.args.cmd_log * 10) == 0:
-                # Save model weights
-                self.save(f'./eval/weights/{self.run_name}.pth')
+                        "Collisions with obstacles": int(np.mean(mean_terminations_oc)),
+                        "Global Steps": global_step,
+                    })
 
                 # TRY NOT TO MODIFY: record rewards for plotting purposes
                 self.writer.add_scalar("logs/charts/learning_rate", self.optimizer.param_groups[0]["lr"], global_step)
@@ -295,6 +292,10 @@ class PPOAgent(nn.Module):
                 self.writer.add_scalar("logs/losses/explained_variance", explained_var, global_step)
                 print("SPS:", int(global_step / (time.time() - start_time)))
                 self.writer.add_scalar("logs/charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
+            if update % (self.args.cmd_log * 1) == 0:
+                # Save model weights
+                self.save(f'./eval/weights/{self.run_name}.pth')
 
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:
