@@ -2,9 +2,8 @@ __pycache__
 .pyc
 .idea
 
-G2RL-Path-Planning/.g2rl
 .g2rl/
-models/
-weights/
+eval/weights/
 runs/
 wandb/
+logs/
