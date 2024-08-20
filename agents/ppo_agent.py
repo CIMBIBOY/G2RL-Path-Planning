@@ -238,6 +238,18 @@ class PPOAgent(nn.Module):
 
             # Update information
             if update % self.args.cmd_log == 0:
+                
+                mean_terminations_rg = []
+                mean_terminations_gi = []
+                mean_terminations_ms = []
+                mean_terminations_oc = []
+
+                for i in range(self.args.num_envs):
+                    mean_terminations_rg.append(self.env.envs[i].terminations[0])
+                    mean_terminations_gi.append(self.env.envs[i].terminations[1])
+                    mean_terminations_ms.append(self.env.envs[i].terminations[2])
+                    mean_terminations_oc.append(self.env.envs[i].terminations[3])
+
                 end_time = time.time()
                 computing_time = end_time - start_time
                 print(f" -------------------- Update: {update} -------------------- ")
@@ -248,12 +260,12 @@ class PPOAgent(nn.Module):
                 print(f"KL Divergence: {approx_kl:.4f}")
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
                 print(f"Steps taken in {update} update: {steps}")
-                print(f"Terminations casued by:\nReached goals: {self.env.terminations[0]:.0f}, No guidance information: {self.env.terminations[1]:.0f}, Max steps reached: {self.env.terminations[2]:.0f}, Collisions with obstacles: {self.env.terminations[3]:.0f}\n")
+                print(f"Terminations casued by:\nReached goals: {np.mean(mean_terminations_rg):.0f}, No guidance information: {mean_terminations_gi:.0f}, Max steps reached: {mean_terminations_ms:.0f}, Collisions with obstacles: {mean_terminations_oc:.0f}\n")
                 start_time = time.time()
                 steps = 0
                 batch_rewards = []
 
-            if update % self.args.cmd_log * 10 == 0:
+            if update % self.args.cmd_log + 1 == 0:
                 # Save model weights
                 self.save(f'./eval/weights/{self.run_name}.pth')
 
@@ -269,6 +281,17 @@ class PPOAgent(nn.Module):
                 print("SPS:", int(global_step / (time.time() - start_time)))
                 self.writer.add_scalar("logs/charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
+                mean_terminations_rg = []
+                mean_terminations_gi = []
+                mean_terminations_ms = []
+                mean_terminations_oc = []
+
+                for i in range(self.args.num_envs):
+                    mean_terminations_rg.append(self.env.envs[i].terminations[0])
+                    mean_terminations_gi.append(self.env.envs[i].terminations[1])
+                    mean_terminations_ms.append(self.env.envs[i].terminations[2])
+                    mean_terminations_oc.append(self.env.envs[i].terminations[3])
+
                 # Log to wandb
                 if self.args.track:
                     self.wandb.log({
@@ -281,10 +304,10 @@ class PPOAgent(nn.Module):
                         "clipfrac": np.mean(clipfracs),
                         "explained_variance": explained_var,
                         "SPS": int(global_step / (time.time() - start_time)),
-                        "Reached goals": int(self.env.terminations[0]), 
-                        "Lost guidance information": int(self.env.terminations[1]), 
-                        "Max steps reached": int(self.env.terminations[2]),
-                        "Collisions with obstacles": int(self.env.terminations[3])
+                        "Reached goals": int(np.mean(mean_terminations_rg)), 
+                        "Lost guidance information": int(np.mean(mean_terminations_gi)), 
+                        "Max steps reached": int(np.mean(mean_terminations_ms)),
+                        "Collisions with obstacles": int(np.mean(mean_terminations_oc))
                     }, step=global_step)
 
             if self.args.target_kl is not None:
