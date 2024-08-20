@@ -26,7 +26,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 2, max_amr = 20, agent_idx = 0, local_fov = 15, pygame_render = True, seed = None):
+    def __init__(self,height = 48, width = 48, amr_count = 2, max_amr = 21, agent_idx = 0, local_fov = 15, pygame_render = True, seed = None):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
@@ -128,6 +128,8 @@ class WarehouseEnvironment:
 
             # Initialize all dynamic obstacles
             self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count, rng=self.np_random)
+
+            # TODO: Implement faster/bigger dynamic obstacles after curriculum learning reaches self.max_amr
             
             if self.init_arr is None or self.init_arr.size == 0:
                 raise ValueError("Initialization failed, init_arr is empty or None")
@@ -151,7 +153,11 @@ class WarehouseEnvironment:
         self.agent_prev_coord = self.dynamic_coords[self.agent_idx][0]  # Take the first position of the path
         # The agent is modified to red
         self.init_arr[self.agent_prev_coord[0], self.agent_prev_coord[1]] = [255, 0, 0]  # Mark the agent's initial position in red
-        
+
+        # TODO: Implement a blue agent, which follows A* path, choosing idle action for every fifth time_idx. 
+        # Additional reward for agent if stays close or surpasses blue agent. + reward dict element
+        # Collision sholdn't be allowed with blue agent, because it will stay on A* path, for which agent recives icreased reward. (Potentially high collision risk.)
+
         self.time_idx = 0
         self.scenes = []
         self.cells_skipped = 0
@@ -254,6 +260,17 @@ class WarehouseEnvironment:
             
         return return_values
     
+    def f_action_space(self):
+        # action space
+        self.action_dict = {
+            0:['up',0,1],
+            1:['down',0,-1],
+            2:['left',-1,0],
+            3:['right',1,0],
+            4:['idle',0,0]
+        }
+        return list(self.action_dict.keys())
+    
     def get_stacked_state(self):
         # Ensure we have exactly Nt observations
         assert len(self.observation_history) == self.Nt, f"Expected {self.Nt} observations, but got {len(self.observation_history)}"
@@ -353,52 +370,6 @@ class WarehouseEnvironment:
         
         return has_guidance
     
-    def render_video(self, train_name, image_index):
-        assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
-        # Get the most recent observation (last channel of the stacked state)
-        img = Image.fromarray(self.init_arr, 'RGB')
-
-        # Ensure the base directory 'training_images' exists
-        base_dir = 'eval/training_images'
-        os.makedirs(base_dir, exist_ok=True)
-
-        # Create train_{train_index}_images directory if it does not exist
-        train_dir = os.path.join(base_dir, f"train_name")
-        os.makedirs(train_dir, exist_ok=True)
-
-        # Save the image with a unique filename
-        img_path = os.path.join(train_dir, f"{train_name}_{int(image_index)}.png")
-        img.save(img_path)
-
-    def render_gif(self):
-        """
-        Renders the current state of the environment in gif format for real-time visualization. 
-        This method should be called after each step.
-        """
-        assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
-        
-        # Convert the environment state to an image
-        img = Image.fromarray(self.init_arr.astype('uint8'), 'RGB')
-        
-        # Resize the image if needed (optional, for better visualization)
-        img = img.resize((200, 200), Image.NEAREST)
-        
-        # Convert PIL Image to numpy array
-        frame = np.array(img)
-        
-        # Append the frame to our list of frames
-        self.frames.append(frame)
-        
-        # Update the GIF file
-        self._update_gif()
-
-    def _update_gif(self):
-        """
-        Updates the GIF file with all frames collected so far.
-        """
-        # Save the frames as a GIF
-        imageio.mimsave("data/g2rl.gif", self.frames, duration=0.5, loop=0)
-
     def render(self):
         if self.pygame_render:  # Check if rendering is enabled
             if self.screen is None:  # Initialize only if not already initialized
@@ -446,6 +417,52 @@ class WarehouseEnvironment:
 
     def close(self):
         pygame.quit()
+    
+    def render_video(self, train_name, image_index):
+        assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
+        # Get the most recent observation (last channel of the stacked state)
+        img = Image.fromarray(self.init_arr, 'RGB')
+
+        # Ensure the base directory 'training_images' exists
+        base_dir = 'eval/training_images'
+        os.makedirs(base_dir, exist_ok=True)
+
+        # Create train_{train_index}_images directory if it does not exist
+        train_dir = os.path.join(base_dir, f"train_name")
+        os.makedirs(train_dir, exist_ok=True)
+
+        # Save the image with a unique filename
+        img_path = os.path.join(train_dir, f"{train_name}_{int(image_index)}.png")
+        img.save(img_path)
+
+    def render_gif(self):
+        """
+        Renders the current state of the environment in gif format for real-time visualization. 
+        This method should be called after each step.
+        """
+        assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
+        
+        # Convert the environment state to an image
+        img = Image.fromarray(self.init_arr.astype('uint8'), 'RGB')
+        
+        # Resize the image if needed (optional, for better visualization)
+        img = img.resize((200, 200), Image.NEAREST)
+        
+        # Convert PIL Image to numpy array
+        frame = np.array(img)
+        
+        # Append the frame to our list of frames
+        self.frames.append(frame)
+        
+        # Update the GIF file
+        self._update_gif()
+
+    def _update_gif(self):
+        """
+        Updates the GIF file with all frames collected so far.
+        """
+        # Save the frames as a GIF
+        imageio.mimsave("data/g2rl.gif", self.frames, duration=0.5, loop=0)
 
     def create_scenes(self, path = "data/agent_locals.gif", length_s = 100):
         if len(self.scenes) > 0:
@@ -453,17 +470,6 @@ class WarehouseEnvironment:
                  save_all=True, append_images=self.scenes[1:], optimize=False, duration=length_s*4, loop=0)
         else:
             pass
-
-    def f_action_space(self):
-        # action space
-        self.action_dict = {
-            0:['up',0,1],
-            1:['down',0,-1],
-            2:['left',-1,0],
-            3:['right',1,0],
-            4:['idle',0,0]
-        }
-        return list(self.action_dict.keys())
 
 # Testing Environment
 

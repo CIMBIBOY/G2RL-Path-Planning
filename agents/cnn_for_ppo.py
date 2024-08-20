@@ -54,8 +54,9 @@ class CNNLSTM(nn.Module):
         self.debug = False
 
     def get_states(self, x, lstm_state, done):
-        
+
         batch_size, num_envs, nt, height, width, channels = x.shape
+        # TODO: Construct get_states so it works with concatenated past observations (nt time dimension > 1) - leverage observation_history 
 
         if self.debug:
             print(f"Debug get_states: x tensor shape: {x.shape}, done: {done.shape} ")

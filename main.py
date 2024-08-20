@@ -14,7 +14,7 @@ from eval.eval import evaluate_performance
 import gym
 
 '''
-python3 main.py --train_name czm2 --seed 80 --method mppo --train scratch --total_timesteps 5120000 --num_steps 256 --cmd_log 5 --learning_rate 3e-5 --pygame
+python3 main.py --train_name cimbi --cuda --seed 160 --method mppo --train scratch --total_timesteps 12800000 --num_steps 2048 --cmd_log 10 --learning_rate 3e-5 --num_envs 4 
 
 python3 main.py --train_name czm1 --seed 31 --method mppo --train retrain --model_weights eval/weights/czm1_mppo_31_1724005169.pth --total_timesteps 1280 --num_steps 128 --cmd_log 5 --learning_rate 3e-5 
 
