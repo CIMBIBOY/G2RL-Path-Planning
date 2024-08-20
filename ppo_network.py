@@ -24,7 +24,7 @@ def ppo_training(env, args, train_name):
             print(f"Error loading model weights: {e}")
             time.sleep(2)
     
-    print_model_summary_ppo(model, (args.batch_size, 4, 30, 30, 4), args.batch_size, env, device)
+    # print_model_summary_ppo(model, (args.batch_size, 4, 1, 30, 30, 4), args.batch_size, env, device)
 
     print(" ---------- Training Started ----------")
 

@@ -2,6 +2,7 @@ import torch
 import random
 import numpy as np
 import time
+from WarehouseEnv import WarehouseEnvironment
 
 # Function to set the seed for reproducibility
 def set_seed(seed, determism):
@@ -29,3 +30,15 @@ def debug_end(stime):
     end_time = time.time()
     operation_time = end_time - stime
     if operation_time > 0.1: print(f"Operation took {operation_time} s to complete")
+
+def make_custom_env(seed, idx, **kwargs):
+    def thunk():
+        # Create an instance of your custom environment
+        env = WarehouseEnvironment(**kwargs, seed=seed + idx)
+        
+        # Apply the seed to ensure reproducibility
+        env.seed(seed + idx)
+        
+        return env
+    
+    return thunk

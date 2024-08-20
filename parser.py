@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument('--model_weights', type=str, default=None,
         help='Path to the model weights file (required if --train is set to retrain).')
     
-    parser.add_argument("--num_envs", type=int, default=1,
+    parser.add_argument("--num_envs", type=int, default=4,
         help="the number of environments running in parallel")
     parser.add_argument("--learning_rate", type=float, default=2.5e-4,
         help="the learning rate of the optimizer")
@@ -35,9 +35,9 @@ def parse_args():
     
     parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
         help="if toggled, this experiment will be tracked with Weights and Biases")
-    parser.add_argument("--wandb-project-name", type=str, default="ppo-implementation-details",
+    parser.add_argument("--wandb_project_name", type=str, default="G2RL",
         help="the wandb's project name")
-    parser.add_argument("--wandb-entity", type=str, default=None,
+    parser.add_argument("--wandb_entity", type=str, default='czimbermark',
         help="the entity (team) of wandb's project")
 
     parser.add_argument("--capture_video", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
@@ -58,7 +58,7 @@ def parse_args():
         help="the discount factor gamma")
     parser.add_argument("--gae_lambda", type=float, default=0.95,
         help="the lambda for the general advantage estimation")
-    parser.add_argument("--num_minibatches", type=int, default=1,
+    parser.add_argument("--num_minibatches", type=int, default=4,
         help="the number of mini_batches")
     parser.add_argument("--update_epochs", type=int, default=4,
         help="the K epochs to update the policy")

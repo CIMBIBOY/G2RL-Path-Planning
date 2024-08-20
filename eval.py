@@ -67,6 +67,14 @@ def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eva
     model = CNNLSTM().to(device)
     agent = PPOAgent(env, model, args, run_name)
 
+    try:
+        agent.load_model_only(args.model_weights)
+        print(f"Loaded model weights from: {args.model_weights}")
+        time.sleep(2)
+    except Exception as e:
+        print(f"Error loading model weights: {e}")
+        time.sleep(2)
+
     os.makedirs(eval_folder, exist_ok=True)
 
     total_moving_cost = 0
@@ -112,8 +120,9 @@ def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eva
                 )
             
             action = action.cpu().numpy().item()
-            next_state, cell, reward, done, info = env.step(action)
-
+            next_state, reward, done, trunc, info = env.step(action)
+            
+            cell = env.agent_prev_coord
             state = next_state
             steps += 1
             episode_reward += reward
@@ -121,8 +130,8 @@ def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eva
             cell = env.agent_prev_coord
             path.append(cell)
 
-            if done:
-                print("Episode finished. Info:")
+            if done or trunc:
+                print("\nInfo:")
                 for key, value in info.items():
                     print(f"  {key}: {value}")
 
@@ -151,8 +160,12 @@ def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eva
         print(f"  Computing time: {computing_time:.4f} s/step")
         print(f"  Episode reward: {episode_reward:.2f}")
         print(f"  Failed paths so far: {failed_paths}")
-        print(f"  Reached goals so far: {env.arrived}")
-        print(f"  ----------------------------------------\n")
+        print(f"  Reached goals for start-goal pair: {env.arrived}")
+        print(f"  Reached goals so far: {env.terminations[0]}")
+        print(f"  Terminations caused by reaching max steps: {env.terminations[2]}")
+        print(f"  Terminations caused by having no global guidance: {env.terminations[1]}")
+        print(f"  Terminations caused by collision with dynamic obstacles: {env.terminations[3]}")
+        print(f" ---------------------------------------\n")
 
         # Save the evaluation image
         save_evaluation_image(env.init_arr, start_cell, end_cell, path, optimal_path_coords, episode, eval_folder)
@@ -162,13 +175,17 @@ def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eva
     avg_detour_percentage = total_detour_percentage / num_episodes
     avg_computing_time = total_computing_time / num_episodes
 
-    print("\nEvaluation Results:")
+    print("\n ---------- Evaluation Results: ----------")
     print(f"Average Reward: {avg_reward:.2f}")
     print(f"Average Moving Cost: {avg_moving_cost:.4f}")
     print(f"Average Detour Percentage: {avg_detour_percentage:.2f}%")
     print(f"Average Computing Time: {avg_computing_time:.4f} s/step")
     print(f"Total Failed Paths: {failed_paths}")
-    print(f"Total Goals Reached: {env.arrived}")
+    print(f"Total Goals Reached: {env.terminations[0]:.0f}")
+    print(f"Terminations caused by reaching max steps so far: {env.terminations[2]:.0f}")
+    print(f"Terminations caused by having no global guidance so far: {env.terminations[1]:.0f}")
+    print(f"Terminations caused by collision with dynamic obstacles so far: {env.terminations[3]:.0f}")
+    print(f" ---------------------------------------- ")
 
     return {
         "avg_reward": avg_reward,
@@ -176,5 +193,8 @@ def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eva
         "detour_percentage": avg_detour_percentage,
         "computing_time": avg_computing_time,
         "failed_paths": failed_paths,
-        "agent_reached_goal": env.arrived
+        "agent_reached_goal": env.terminations[0],
+        "max_steps_reached": env.terminations[2],
+        "no_global_guidance": env.terminations[1],
+        "collisions_with_obstacles": env.terminations[3]
     }

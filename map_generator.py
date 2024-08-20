@@ -15,19 +15,20 @@ It includes functions to:
 	6.	Generate heuristic values for the A* algorithm based on Manhattan distances.
 '''
 
-def random_map(w,h, n_static, map_name = "random-1", color_coord = [50,205,50]):
+def random_map(w, h, n_static, map_name="random-1", color_coord=[50, 205, 50], rng=None):
+    if rng is None:
+        rng = np.random  # Use the global numpy RNG if none is provided
 
-    static_coord_width = [random.randint(0,w-1) for i in range(n_static)]
-    static_coord_height = [random.randint(0,h-1) for i in range(n_static)]
+    static_coord_width = [rng.integers(0, w) for i in range(n_static)]
+    static_coord_height = [rng.integers(0, h) for i in range(n_static)]
 
-    data = np.ones((h, w, 3), dtype=np.uint8)*255
+    data = np.ones((h, w, 3), dtype=np.uint8) * 255
 
     for i in range(n_static):
         data[static_coord_height[i], static_coord_width[i]] = color_coord
     
     img = Image.fromarray(data, 'RGB')
     img.save(f'data/{map_name}.png')
-
 
 
 def guide_map(w,h,h_coord,w_coord, map_name = "guide-1", color_coord = [50,205,50]):
@@ -69,7 +70,7 @@ def map_to_value(arr):
     return new_arr
 
 
-def start_end_points(obs_coords, arr):
+def start_end_points(obs_coords, arr, rng=None):
     """
     Generate start and end coordinates for dynamic obstacles.
 
@@ -79,20 +80,24 @@ def start_end_points(obs_coords, arr):
 
     Output: list of [dynamic obstacle id, [start point coordinates, end point coordinates]]
     """
+
+    if rng is None:
+        rng = np.random  # Use the global numpy RNG if none is provided
+
     coords = []
     h, w = arr.shape[:2]
-    end_points = set()  # To keep track of all end points
+    end_points = set()
 
     for i, start in enumerate(obs_coords):
         attempts = 0
         while attempts < 1000:
-            h_new = random.randint(0, h-1)
-            w_new = random.randint(0, w-1)
+            h_new = rng.integers(0, h)
+            w_new = rng.integers(0, w)
             new_point = [h_new, w_new]
             
             if (arr[h_new][w_new] == 0 and 
                 new_point not in obs_coords and 
-                new_point != start and  # This check ensures start != end
+                new_point != start and 
                 tuple(new_point) not in end_points):
                 
                 coords.append([i, start + new_point])

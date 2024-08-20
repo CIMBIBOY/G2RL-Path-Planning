@@ -1,3 +1,4 @@
+# AUTOROM_ACCEPT_LICENSE=1 pip install -r requirements.txt
 numpy
 opencv-python
 Pillow
@@ -10,4 +11,10 @@ argparse
 keyboard
 stable_baselines3
 tensorboard
-gym
+autorom
+ale-py==0.8.0
+gymnasium[box2d]
+wandb
+atari-py==0.2.5
+gymanisum[atari]
+gym[atari]

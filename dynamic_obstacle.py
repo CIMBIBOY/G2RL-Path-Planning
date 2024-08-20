@@ -8,7 +8,7 @@ import random
 '''
 
 # Function to initialize dynamic obstacles on the map
-def initialize_objects(arr, n_dynamic_obst = 20):
+def initialize_objects(arr, n_dynamic_obst = 20, rng=None):
     """
     Input: array of initial map, number of dynamic obstacles
 
@@ -17,17 +17,20 @@ def initialize_objects(arr, n_dynamic_obst = 20):
     """
     arr = arr.copy()
     coord = []
-    h,w = arr.shape[:2]
+    h, w = arr.shape[:2]
+
+    if rng is None:
+        rng = np.random  # Use the global numpy RNG if none is provided
 
     while n_dynamic_obst > 0:
-        h_obs = random.randint(0,h-1)
-        w_obs = random.randint(0,w-1)
+        h_obs = rng.integers(0, h)
+        w_obs = rng.integers(0, w)
 
         cell_coord = arr[h_obs, w_obs]
         if cell_coord[0] != 0 and cell_coord[1] != 0 and cell_coord[2] != 0:
-            arr[h_obs, w_obs] = [255,165,0]
+            arr[h_obs, w_obs] = [255, 165, 0]
             n_dynamic_obst -= 1
-            coord.append([h_obs,w_obs])
+            coord.append([h_obs, w_obs])
     
     return coord, arr
 
@@ -59,12 +62,13 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     agent_path = coords[agent]
 
     done = False
+    trunc = False
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
     h_new, w_new = h_old + direction[0], w_old - direction[1]
 
     # debug to monitor the agent's movement
-    # print(f"Agent position: ({agent_old_coordinates[0]}, {agent_old_coordinates[1]})")
-    # print(f"New agent position: ({h_new}, {w_new})")
+    # print(f"At time index: {time_idx}\nAgent position: ({agent_old_coordinates[0]}, {agent_old_coordinates[1]})")
+    # print(f"New agent position: ({h_new}, {w_new})\n")
 
     # Marking agent's goal cell as green 
     # inst_arr[agent_goal[0], agent_goal[1]] = [0, 255, 0]
@@ -86,7 +90,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
        (inst_arr[h_new, w_new][0] == 0 and inst_arr[h_new, w_new][1] == 0 and inst_arr[h_new, w_new][2] == 0):
         agent_reward += rewards_dict('1')
         # print("Reward for collision")
-        done = True
+        trunc = True
         info['collision'] = True
         # print("Collision with obstacles or out of bounds")
         terminations[3] += 1
@@ -163,7 +167,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
 
-    return np.array(local_obs), np.array(local_map), global_map, done, info, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
+    return np.array(local_obs), np.array(local_map), global_map, done, trunc, info, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
 
 
 def rewards_dict(case, N = 0, path_len = 0):

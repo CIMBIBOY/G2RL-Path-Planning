@@ -107,8 +107,8 @@ class PPOAgent(nn.Module):
         num_updates = self.args.total_timesteps // self.args.batch_size
         
         # Initialize tensors
-        obs = torch.zeros((self.args.num_steps, self.args.num_envs) + self.env.observation_space.shape).to(self.device)
-        actions = torch.zeros((self.args.num_steps, self.args.num_envs) + self.env.action_space.shape).to(self.device)
+        obs = torch.zeros((self.args.num_steps, self.args.num_envs) + self.env.observation_space.shape[-4:]).to(self.device)
+        actions = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         logprobs = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         rewards = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         dones = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
@@ -118,14 +118,13 @@ class PPOAgent(nn.Module):
         start_time = time.time()
 
         # Reset the environment
-        _, reset = self.env.reset()
-        next_obs = torch.Tensor(reset).to(self.device)
+        reset, info = self.env.reset()
+        next_obs = torch.Tensor(reset).permute(1, 0, 2, 3, 4, 5).to(self.device)
         next_done = torch.zeros(self.args.num_envs).to(self.device)
         
         # Initialize LSTM states
         next_lstm_state = self.init_lstm_states(self.args.num_envs)
 
-        '''
         print(f"actions shape: {actions.shape}")
         print(f"obs shape: {obs.shape}")
         print(f"logprobs shape: {logprobs.shape}")
@@ -136,7 +135,7 @@ class PPOAgent(nn.Module):
         print(f"next_obs shape: {next_obs.shape}")
         print(f"next_done shape: {next_done.shape}")
         print(f"next_lstm_state shape: {[state.shape for state in next_lstm_state]}")
-        '''
+        
         start_time = time.time()
         steps = 0
         batch_rewards = []
@@ -164,23 +163,29 @@ class PPOAgent(nn.Module):
                 actions[step] = action
                 logprobs[step] = logprob
 
-                # print(action.cpu().numpy())
-                next_obs, position, reward, done, info = self.env.step(action.cpu().numpy().item())
+                print(f"PPO action tensor: {action.cpu().numpy()}")
+                next_obs, reward, done, trunc, info = self.env.step(action.cpu().numpy())
                 steps += 1
-                batch_rewards.append(reward)
-                rewards[step] = torch.tensor(reward).to(self.device).view(-1)
-                next_obs = torch.Tensor(next_obs).to(self.device)
-                next_done = torch.tensor([done], dtype=torch.float32).to(self.device)
-
+                
                 if self.args.pygame:
                     # Render the environment
-                    self.env.render()
+                    for i, env in enumerate(self.env.envs):
+                        print(f"Env {i}: Step count: {steps}, Agent position: {env.agent_prev_coord}, Action: {env.last_action}")
+                    self.env.envs[0].render()
+
+                batch_rewards.append(reward)
+                rewards[step] = torch.tensor(reward).to(self.device).view(-1)
+                next_obs = torch.Tensor(next_obs).permute(1, 0, 2, 3, 4, 5).to(self.device)
+                next_done = torch.Tensor(done).to(self.device)
 
                 # Reset LSTM states for done episodes
-                if done:
-                    print("Episode finished. Info:")
+                if done.any():
+                    print(done)
+                    '''
+                    print(f"{self.env.episode_count}'th episode finished.\nInfo:")
                     for key, value in info.items():
                         print(f"  {key}: {value}")
+                    '''
                     self.env.reset()
                     break   
 
@@ -213,14 +218,22 @@ class PPOAgent(nn.Module):
                     advantages = returns - values
 
             # flatten the batch
-            b_obs = obs.reshape((-1,) + self.env.observation_space.shape)
+            b_obs = obs.reshape((-1,) + self.env.observation_space.shape[-4:]).unsqueeze(1)
             b_logprobs = logprobs.reshape(-1)
-            b_actions = actions.reshape((-1,) + self.env.action_space.shape)
+            b_actions = actions.reshape((-1,))
             b_advantages = advantages.reshape(-1)
             b_returns = returns.reshape(-1)
             b_values = values.reshape(-1)
             b_dones = dones.reshape(-1)
 
+            # Print the shapes
+            print(f"b_obs shape: {b_obs.shape}")
+            print(f"b_logprobs shape: {b_logprobs.shape}")
+            print(f"b_actions shape: {b_actions.shape}")
+            print(f"b_advantages shape: {b_advantages.shape}")
+            print(f"b_returns shape: {b_returns.shape}")
+            print(f"b_values shape: {b_values.shape}")
+            print(f"b_dones shape: {b_dones.shape}")
 
             # Optimizing the policy and value network
             pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl, clipfracs = self.update(

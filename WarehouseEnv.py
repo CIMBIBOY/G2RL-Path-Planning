@@ -11,6 +11,8 @@ from collections import deque
 import torch
 from utils import calculate_max_steps
 from gym.spaces import Box, Discrete
+from gym.utils import seeding
+import random
 
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
@@ -25,7 +27,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 2, max_amr = 20, agent_idx = 0, local_fov = 15, pygame_render = True):
+    def __init__(self,height = 48, width = 48, amr_count = 2, max_amr = 20, agent_idx = 0, local_fov = 15, pygame_render = True, seed = None):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
@@ -41,7 +43,7 @@ class WarehouseEnvironment:
         # state space dimension
         self.n_states = height * width
         # observation space
-        self.observation_space = Box(low=0, high=255, shape=(4, 30, 30, 4), dtype=np.uint8)
+        self.observation_space = Box(low=0, high=255, shape=(1, 1, 30, 30, 4), dtype=np.uint8)
         # action space dim
         self.n_actions = len(self.f_action_space())
         # Define action space
@@ -74,28 +76,59 @@ class WarehouseEnvironment:
        
         self.frames = []  # To store frames for .gif visualization
 
+        self.metadata = {
+            'render.modes': ['human'],  # Specifies that 'human' render mode is supported
+            'video.frames_per_second': 30  # Frame rate for rendering videos, adjust as needed
+        }
         self.pygame_render = pygame_render
         self.screen = None
         self.clock = None
+        self.use_past = False
 
-    
-    def reset(self):
+        self.info = {
+            'R_max_step': False,
+            'no_global_guidance': False,
+            'goal_reached': False,
+            'collision': False,
+            'steps': 0,
+            # 'path': [],
+            'reward': 0,
+        }
+
+        self.seed(seed)
+
+    def seed(self, seed=None):
+        if seed is None:
+            seed = np.random.randint(0, 2**32 - 1)  # Generate a valid seed if none is provided
+        elif not (0 <= seed < 2**32):
+            raise ValueError("Seed must be between 0 and 2**32 - 1")
+        # Ensure seed is an integer
+        seed = int(seed)
+        self.np_random, seed = seeding.np_random(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        return [seed]
+
+    def reset(self): 
         # Increment the episode count
         self.episode_count += 1
         
         # Reset step count for maximum timesteps
         self.steps = 0
+        self.info['steps'] = 0
         
         # Generate new coordinates and paths every 50 episodes
         if self.episode_count == 0 or self.episode_count % 50 == 1:
 
+            self.seed(self.np_random.integers(0, 1000000))
             # Implementing curriculum learning
             if self.arrived >= 10 and self.amr_count <= self.max_amr: 
                 self.amr_count += 1
                 print(f"Dyanmic object added, current count: {self.amr_count}")
 
             # Initialize all dynamic obstacles
-            self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count)
+            self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count, rng=self.np_random)
             
             if self.init_arr is None or self.init_arr.size == 0:
                 raise ValueError("Initialization failed, init_arr is empty or None")
@@ -141,26 +174,18 @@ class WarehouseEnvironment:
         self.observation_history.clear()
         self.initial_random_steps = 0
 
-        self.info = {
-            'timeout': False,
-            'no_global_guidance': False,
-            'goal_reached': False,
-            'collision': False,
-            'steps': 0,
-            # 'path': [],
-            'reward': 0,
-        }
-
         # Take initial step to get the first real observation
         graphical_state, _, _, _, _ = self.step(4)  # Assuming 4 is a valid initial action
-        self.time_idx -= 1
-        graphical_state, _, _, _, _ = self.step(4)
-        self.time_idx -= 1
-        graphical_state, _, _, _, _ = self.step(4)
-        self.time_idx -= 1
-        graphical_state, _, _, _, _ = self.step(4)
+        
+        if self.use_past:
+            self.time_idx -= 1
+            graphical_state, _, _, _, _ = self.step(4)
+            self.time_idx -= 1
+            graphical_state, _, _, _, _ = self.step(4)
+            self.time_idx -= 1
+            graphical_state, _, _, _, _ = self.step(4)
 
-        return start[0] * start[1], graphical_state
+        return graphical_state, self.info
 
     def step(self, action):
         if len(self.init_arr) == 0:
@@ -168,14 +193,15 @@ class WarehouseEnvironment:
             return None, None, None, False
 
         conv, x, y = self.action_dict[action]
-        # print(f'Action taken: {conv}')
+        print(f'Action taken: {conv}')
+        print(f"Agent position before coord update: {self.agent_prev_coord}")
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
         
         self.time_idx += 1
 
         # Update coordinates 
-        local_obs, local_map, self.global_mapper_arr, done, self.info, rewards, \
+        local_obs, local_map, self.global_mapper_arr, done, trunc, self.info, rewards, \
         self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.terminations, self.stays = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
@@ -185,26 +211,26 @@ class WarehouseEnvironment:
 
         self.steps += 1
         self.agent_prev_coord = new_agent_coord
+        print(f"Agent position after coord update: {self.agent_prev_coord}")
 
-         # Update info
+        # Update info
         self.info['steps'] += 1
         # self.info['path'].append((self.agent_prev_coord[0], self.agent_prev_coord[1]))
         self.info['reward'] += rewards
 
-        
         if reached_goal == True:
             self.arrived += 1
 
         # Check if there's global guidance in the local FOV
         if not self.has_global_guidance():
-            done = True
+            trunc = True
             self.info['no_global_guidance'] = True
             self.terminations[1] += 1
 
         if self.steps > self.max_step:
             # print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
-            done = True
-            self.info['timeout'] = True
+            trunc = True
+            self.info['R_max_step'] = True
             self.terminations[2] += 1
 
         combined_arr = np.array([])
@@ -215,23 +241,28 @@ class WarehouseEnvironment:
             combined_arr = symmetric_pad_array(combined_arr, target_array, 255)
             combined_arr = combined_arr.reshape(1,1,combined_arr.shape[0], combined_arr.shape[1], combined_arr.shape[2])
         
-        if len(combined_arr) > 0:
-            if len(self.observation_history) < self.Nt:
-                self.observation_history.append(combined_arr)
-                self.initial_random_steps += 1
-            else:
-                # Remove the oldest observation and add the new one
-                self.observation_history.popleft()
-                self.observation_history.append(combined_arr)
-
+        if self.use_past: 
+            if len(combined_arr) > 0:
+                if len(self.observation_history) < self.Nt:
+                    self.observation_history.append(combined_arr)
+                    self.initial_random_steps += 1
+                else:
+                    # Remove the oldest observation and add the new one
+                    self.observation_history.popleft()
+                    self.observation_history.append(combined_arr)
+        
+        
         if self.initial_random_steps < self.Nt:
             # Return the single observation during initial steps
-            return_values = (combined_arr, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, done, self.info)
+            return_values = (combined_arr, rewards, done, trunc, self.info)
         else:
-            # Return the stacked state after we have enough observations
-            stacked_state = self.get_stacked_state()
-            return_values = (stacked_state, self.agent_prev_coord[0] * self.agent_prev_coord[1], rewards, done, self.info)
-        
+            if self.use_past:
+                # Return the stacked state after we have enough observations
+                stacked_state = self.get_stacked_state()
+                return_values = (stacked_state, rewards, done, trunc, self.info)
+            
+        print(f"done flag: {done} or trunc flag {trunc}")
+        print(f"Info: {self.info}")
         return return_values
     
     def get_stacked_state(self):
@@ -296,7 +327,7 @@ class WarehouseEnvironment:
         Generate destinations and routes
         """
         value_map = map_to_value(self.init_arr.squeeze())
-        start_end_coords = start_end_points(self.dynamic_coords, value_map)
+        start_end_coords = start_end_points(self.dynamic_coords, value_map, self.np_random)
 
         self.agents_paths = []
         for idx, idx_coords in start_end_coords:
@@ -385,8 +416,9 @@ class WarehouseEnvironment:
             if self.screen is None:  # Initialize only if not already initialized
                 pygame.init()
                 print("Pygame screen constructed")
-                self.screen = pygame.display.set_mode((200, 200))
+                self.screen = pygame.display.set_mode((800, 800))
                 self.clock = pygame.time.Clock()
+                pygame.display.set_caption(f"Warehouse Environment")
 
         if self.pygame_render == False:
             pygame.quit()

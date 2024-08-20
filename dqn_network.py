@@ -41,7 +41,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
 
     try:        
         for e in range(num_episodes):
-            _, state = env.reset()
+            state, info = env.reset()
             # Render the environment if it's enabled
             if env.pygame_render:
                 env.render()
@@ -61,7 +61,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
                 # Compute action
                 action = agent.act(state)
                 # Step the environment
-                next_state, _, reward, done, info = env.step(action)
+                next_state, reward, done, trunc, info = env.step(action)
 
                 # Render the environment if it's enabled
                 if env.pygame_render:
@@ -74,7 +74,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
                 if state.shape != (1, 1, 30, 30, 4): 
                     agent.store(state, action, reward, next_state, terminated)
                 
-                if done.item() == 1 or info:
+                if done or trunc:
                     agent.align_target_model()
                     break
                 

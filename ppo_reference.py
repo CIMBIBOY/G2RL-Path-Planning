@@ -1,10 +1,21 @@
+'''
+@inproceedings{shengyi2022the37implementation,
+  author = {Huang, Shengyi and Dossa, Rousslan Fernand Julien and Raffin, Antonin and Kanervisto, Anssi and Wang, Weixun},
+  title = {The 37 Implementation Details of Proximal Policy Optimization},
+  booktitle = {ICLR Blog Track},
+  year = {2022},
+  note = {https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/},
+  url  = {https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/}
+}
+'''
+
 import argparse
 import os
 import random
 import time
 from distutils.util import strtobool
 
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -48,7 +59,7 @@ def parse_args():
         help="weather to capture videos of the agent performances (check out `videos` folder)")
 
     # Algorithm specific arguments
-    parser.add_argument("--num-envs", type=int, default=8,
+    parser.add_argument("--num-envs", type=int, default=4,
         help="the number of parallel game environments")
     parser.add_argument("--num-steps", type=int, default=128,
         help="the number of steps to run in each environment per policy rollout")
@@ -139,12 +150,17 @@ class Agent(nn.Module):
         self.critic = layer_init(nn.Linear(128, 1), std=1)
 
     def get_states(self, x, lstm_state, done):
+        # print(f"x tensor input shape:{x.shape}")
         hidden = self.network(x / 255.0)
+        # print(f"hidden shape after network:{hidden.shape}")
 
         # LSTM logic
         batch_size = lstm_state[0].shape[1]
+        # print(f"batch size:{batch_size}")
         hidden = hidden.reshape((-1, batch_size, self.lstm.input_size))
+        # print(f"hidden shape after reshape:{hidden.shape}")
         done = done.reshape((-1, batch_size))
+        # print(f"done shape after reshape:{done.shape}")
         new_hidden = []
         for h, d in zip(hidden, done):
             h, lstm_state = self.lstm(
@@ -156,6 +172,7 @@ class Agent(nn.Module):
             )
             new_hidden += [h]
         new_hidden = torch.flatten(torch.cat(new_hidden), 0, 1)
+        # print(f"new_hidden shape after cat + flatten:{done.shape}")
         return new_hidden, lstm_state
 
     def get_value(self, x, lstm_state, done):
@@ -163,11 +180,15 @@ class Agent(nn.Module):
         return self.critic(hidden)
 
     def get_action_and_value(self, x, lstm_state, done, action=None):
+        # print(f"Input shape: x tensor: {x.shape}, done shape: {done}")
         hidden, lstm_state = self.get_states(x, lstm_state, done)
+        # print(f"Hidden shape: {hidden.shape}")
         logits = self.actor(hidden)
+        # print(f"logits shape: {logits.shape}")
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
+            # print(f"actions shape: {action.shape}")
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden), lstm_state
 
 
@@ -217,10 +238,18 @@ if __name__ == "__main__":
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
 
+    print(f"actions shape: {actions.shape}")
+    print(f"obs shape: {obs.shape}")
+    print(f"logprobs shape: {logprobs.shape}")
+    print(f"rewards shape: {rewards.shape}")
+    print(f"dones shape: {dones.shape}")
+    print(f"values shape: {values.shape}")  
+    
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    next_obs = torch.Tensor(envs.reset()).to(device)
+    reset, info = envs.reset()
+    next_obs = torch.Tensor(reset).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
     next_lstm_state = (
         torch.zeros(agent.lstm.num_layers, args.num_envs, agent.lstm.hidden_size).to(device),
@@ -249,16 +278,19 @@ if __name__ == "__main__":
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
-            next_obs, reward, done, info = envs.step(action.cpu().numpy())
+            next_obs, reward, terminated, truncated, info = envs.step(action.cpu().numpy())
+            done = np.logical_or(terminated, truncated)
+
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
 
-            for item in info:
-                if "episode" in item.keys():
+
+            # Safely handle info dicts
+            for idx, item in enumerate(info):
+                if isinstance(item, dict) and 'episode' in item:
                     print(f"global_step={global_step}, episodic_return={item['episode']['r']}")
                     writer.add_scalar("charts/episodic_return", item["episode"]["r"], global_step)
                     writer.add_scalar("charts/episodic_length", item["episode"]["l"], global_step)
-                    break
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -300,6 +332,15 @@ if __name__ == "__main__":
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
+
+        # Print the shapes
+        print(f"b_obs shape: {b_obs.shape}")
+        print(f"b_logprobs shape: {b_logprobs.shape}")
+        print(f"b_actions shape: {b_actions.shape}")
+        print(f"b_advantages shape: {b_advantages.shape}")
+        print(f"b_returns shape: {b_returns.shape}")
+        print(f"b_values shape: {b_values.shape}")
+        print(f"b_dones shape: {b_dones.shape}")
 
         # Optimizing the policy and value network
         assert args.num_envs % args.num_minibatches == 0
