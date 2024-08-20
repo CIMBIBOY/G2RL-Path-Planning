@@ -125,6 +125,7 @@ class PPOAgent(nn.Module):
         # Initialize LSTM states
         next_lstm_state = self.init_lstm_states(self.args.num_envs)
 
+        '''
         print(f"actions shape: {actions.shape}")
         print(f"obs shape: {obs.shape}")
         print(f"logprobs shape: {logprobs.shape}")
@@ -135,6 +136,7 @@ class PPOAgent(nn.Module):
         print(f"next_obs shape: {next_obs.shape}")
         print(f"next_done shape: {next_done.shape}")
         print(f"next_lstm_state shape: {[state.shape for state in next_lstm_state]}")
+        #'''
         
         start_time = time.time()
         steps = 0
@@ -163,14 +165,12 @@ class PPOAgent(nn.Module):
                 actions[step] = action
                 logprobs[step] = logprob
 
-                print(f"PPO action tensor: {action.cpu().numpy()}")
+                # print(f"PPO action tensor: {action.cpu().numpy()}")
                 next_obs, reward, done, trunc, info = self.env.step(action.cpu().numpy())
                 steps += 1
                 
                 if self.args.pygame:
-                    # Render the environment
-                    for i, env in enumerate(self.env.envs):
-                        print(f"Env {i}: Step count: {steps}, Agent position: {env.agent_prev_coord}, Action: {env.last_action}")
+                    # Render the first environment instance 
                     self.env.envs[0].render()
 
                 batch_rewards.append(reward)
@@ -180,12 +180,11 @@ class PPOAgent(nn.Module):
 
                 # Reset LSTM states for done episodes
                 if done.any():
-                    print(done)
                     '''
                     print(f"{self.env.episode_count}'th episode finished.\nInfo:")
                     for key, value in info.items():
                         print(f"  {key}: {value}")
-                    '''
+                    #'''
                     self.env.reset()
                     break   
 
@@ -226,21 +225,12 @@ class PPOAgent(nn.Module):
             b_values = values.reshape(-1)
             b_dones = dones.reshape(-1)
 
-            # Print the shapes
-            print(f"b_obs shape: {b_obs.shape}")
-            print(f"b_logprobs shape: {b_logprobs.shape}")
-            print(f"b_actions shape: {b_actions.shape}")
-            print(f"b_advantages shape: {b_advantages.shape}")
-            print(f"b_returns shape: {b_returns.shape}")
-            print(f"b_values shape: {b_values.shape}")
-            print(f"b_dones shape: {b_dones.shape}")
-
             # Optimizing the policy and value network
             pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl, clipfracs = self.update(
                 b_obs, b_actions, b_logprobs, b_advantages, b_returns, b_values, initial_lstm_state, b_dones
             )
 
-            # Print update information
+            # Update information
             if update % self.args.cmd_log == 0:
                 end_time = time.time()
                 computing_time = end_time - start_time
@@ -258,21 +248,13 @@ class PPOAgent(nn.Module):
                 batch_rewards = []
 
             if update % self.args.cmd_log * 10 == 0:
-                self.save(f'./weights/{self.run_name}.pth')
+                self.save(f'./eval/weights/{self.run_name}.pth')
 
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:
                     break
 
         return pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl
-
-    '''
-    def reset_lstm_state_at_index(self, lstm_state, index):
-        # Reset hidden and cell state at the specific index
-        lstm_state[0][:, index, :] = 0
-        lstm_state[1][:, index, :] = 0
-        return lstm_state
-    '''
     
     def init_lstm_states(self, num_envs=1):
         return (

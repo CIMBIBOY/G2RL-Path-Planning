@@ -1,15 +1,14 @@
 from PIL import Image
 import numpy as np
-from dynamic_obstacle import initialize_objects, update_coords
-from map_generator import start_end_points, map_to_value, global_guidance
-from global_mapper import find_path, return_path
-from utils import symmetric_pad_array
+from environment.dynamic_obstacle import initialize_objects, update_coords
+from environment.map_generator import start_end_points, map_to_value, global_guidance
+from environment.global_mapper import find_path, return_path
+from helpers.utils import symmetric_pad_array, calculate_max_steps
 import os
 import imageio
 import pygame
 from collections import deque
 import torch
-from utils import calculate_max_steps
 from gym.spaces import Box, Discrete
 from gym.utils import seeding
 import random
@@ -50,7 +49,7 @@ class WarehouseEnvironment:
         self.action_space = Discrete(self.n_actions)
         # Number of historical observations to use
         self.Nt = 4 
-        self.initial_random_steps = 0
+        self.initial_random_steps = False
         # Buffer to store past observations to store last 4 observations
         self.observation_history = deque(maxlen=self.Nt)
         # Agent id
@@ -83,7 +82,7 @@ class WarehouseEnvironment:
         self.pygame_render = pygame_render
         self.screen = None
         self.clock = None
-        self.use_past = False
+        self.use_past = True
 
         self.info = {
             'R_max_step': False,
@@ -172,18 +171,10 @@ class WarehouseEnvironment:
         self.agent_goal = self.agent_path[-1]  # Get the goal from the agent's path
 
         self.observation_history.clear()
-        self.initial_random_steps = 0
+        self.initial_random_steps = False
 
         # Take initial step to get the first real observation
         graphical_state, _, _, _, _ = self.step(4)  # Assuming 4 is a valid initial action
-        
-        if self.use_past:
-            self.time_idx -= 1
-            graphical_state, _, _, _, _ = self.step(4)
-            self.time_idx -= 1
-            graphical_state, _, _, _, _ = self.step(4)
-            self.time_idx -= 1
-            graphical_state, _, _, _, _ = self.step(4)
 
         return graphical_state, self.info
 
@@ -193,8 +184,6 @@ class WarehouseEnvironment:
             return None, None, None, False
 
         conv, x, y = self.action_dict[action]
-        print(f'Action taken: {conv}')
-        print(f"Agent position before coord update: {self.agent_prev_coord}")
         
         target_array = (2*self.local_fov, 2*self.local_fov, 4)
         
@@ -211,7 +200,6 @@ class WarehouseEnvironment:
 
         self.steps += 1
         self.agent_prev_coord = new_agent_coord
-        print(f"Agent position after coord update: {self.agent_prev_coord}")
 
         # Update info
         self.info['steps'] += 1
@@ -245,14 +233,17 @@ class WarehouseEnvironment:
             if len(combined_arr) > 0:
                 if len(self.observation_history) < self.Nt:
                     self.observation_history.append(combined_arr)
-                    self.initial_random_steps += 1
+                    self.observation_history.append(combined_arr)
+                    self.observation_history.append(combined_arr)
+                    self.observation_history.append(combined_arr)
+                    self.initial_random_steps = True
                 else:
                     # Remove the oldest observation and add the new one
                     self.observation_history.popleft()
                     self.observation_history.append(combined_arr)
         
         
-        if self.initial_random_steps < self.Nt:
+        if self.initial_random_steps == False:
             # Return the single observation during initial steps
             return_values = (combined_arr, rewards, done, trunc, self.info)
         else:
@@ -261,8 +252,6 @@ class WarehouseEnvironment:
                 stacked_state = self.get_stacked_state()
                 return_values = (stacked_state, rewards, done, trunc, self.info)
             
-        print(f"done flag: {done} or trunc flag {trunc}")
-        print(f"Info: {self.info}")
         return return_values
     
     def get_stacked_state(self):
@@ -364,14 +353,13 @@ class WarehouseEnvironment:
         
         return has_guidance
     
-
     def render_video(self, train_name, image_index):
         assert len(self.init_arr) != 0, "Run env.reset() before proceeding"
         # Get the most recent observation (last channel of the stacked state)
         img = Image.fromarray(self.init_arr, 'RGB')
 
         # Ensure the base directory 'training_images' exists
-        base_dir = 'training_images'
+        base_dir = 'eval/training_images'
         os.makedirs(base_dir, exist_ok=True)
 
         # Create train_{train_index}_images directory if it does not exist

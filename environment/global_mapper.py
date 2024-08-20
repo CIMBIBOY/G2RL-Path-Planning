@@ -1,4 +1,4 @@
-from map_generator import heuristic_generator
+from environment.map_generator import heuristic_generator
 
 '''
 1.	Pathfinding algorithm implementations.

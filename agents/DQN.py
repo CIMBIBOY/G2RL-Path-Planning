@@ -1,4 +1,4 @@
-from cnn_for_dqn import CNNLSTMActor
+from agents.cnn_for_dqn import CNNLSTMActor
 import numpy as np
 import random
 from collections import deque
@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
-from PER import PrioritizedReplayBuffer
+from helpers.PER import PrioritizedReplayBuffer
 
 class Agent:
     def __init__(self, enviroment, model, total_training_steps = 100000, device = 'cuda', batch_size = 32):

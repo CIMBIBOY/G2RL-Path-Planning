@@ -1,25 +1,26 @@
 
-from WarehouseEnv import WarehouseEnvironment
-from train_utils import set_seed, print_cuda_info, make_custom_env
-from dqn_network import dqn_training
-from q_learning import q_learning_training
-from ppo_network import ppo_training
-from parser import parse_args
+from environment.WarehouseEnv import WarehouseEnvironment
+from environment.vector_env import make_custom_env
+from helpers.utils import set_seed, print_cuda_info
+from agents.dqn_network import dqn_training
+from agents.q_learning import q_learning_training
+from agents.ppo_network import ppo_training
+from helpers.parser import parse_args
 import time
 import pygame
 from torch.utils.tensorboard import SummaryWriter
 import torch
-from eval import evaluate_performance
+from eval.eval import evaluate_performance
 import gym
 
 '''
 python3 main.py --train_name czm2 --seed 80 --method mppo --train scratch --total_timesteps 5120000 --num_steps 256 --cmd_log 5 --learning_rate 3e-5 --pygame
 
-python3 main.py --train_name czm1 --seed 31 --method mppo --train retrain --model_weights weights/czm1_mppo_31_1724005169.pth --total_timesteps 1280 --num_steps 128 --cmd_log 5 --learning_rate 3e-5 
+python3 main.py --train_name czm1 --seed 31 --method mppo --train retrain --model_weights eval/weights/czm1_mppo_31_1724005169.pth --total_timesteps 1280 --num_steps 128 --cmd_log 5 --learning_rate 3e-5 
 
 python3 main.py --train_name czm1 --seed 37 --method dqn --train scratch --total_timesteps 100000 --num_steps 1000 --pygame --cmd_log 5 --batch 64 --explore 20000
 
-python3 main.py --train_name czm1 --seed 100 --method mppo --train retrain --model_weights weights/czm1_mppo_31_1724005169.pth --eval --eval_steps 100
+python3 main.py --train_name czm1 --seed 100 --method mppo --train retrain --model_weights eval/weights/czm1_mppo_31_1724005169.pth --eval --eval_steps 100
 
 '''
 
@@ -52,15 +53,30 @@ if __name__ == '__main__':
     pygame.init()
     time.sleep(1)
     
-    # Set up the parallel environments
-    envs = gym.vector.SyncVectorEnv(
-        [make_custom_env(seed=args.seed, idx=i, height=48, width=48, amr_count=2, pygame_render=args.pygame) for i in range(args.num_envs)]
-    )
-    state, info = envs.reset()
-    print(f"Input tensor dimension (state.shape): {state.shape}")
+    if args.method == 'mppo':
+        # Set up the parallel environments
+        envs = gym.vector.SyncVectorEnv(
+            [make_custom_env(seed=args.seed, idx=i, height=48, width=48, amr_count=2, pygame_render=args.pygame) for i in range(args.num_envs)]
+        )
+        # Reset num_envs number environment
+        state, info = envs.reset()
+        print(f"Input tensor dimension (state.shape): {state.shape}")
 
-    if args.pygame:
-        envs.envs[0].render() 
+        # Render the first env instance
+        if args.pygame:
+            envs.envs[0].render() 
+
+    elif args.eval or args.method != 'mppo': 
+        if args.eval: args.seed += 1
+        # Create single env
+        env = WarehouseEnvironment(pygame_render=args.pygame, seed = args.seed)
+        # Reset single number environment
+        state, info = env.reset()
+        print(f"Input tensor dimension (state.shape): {state.shape}")
+
+        # Render the env
+        if args.pygame:
+            env.render() 
 
     model_weights_path = None
     if args.train == 'retrain':
@@ -69,7 +85,6 @@ if __name__ == '__main__':
         model_weights_path = args.model_weights
 
     if args.eval and model_weights_path is not None:
-        env = WarehouseEnvironment(pygame_render=args.pygame, seed = args.seed + 1)
         final_performance = evaluate_performance(env, args, run_name, args.eval_steps)
         print(f"Final average reward: {final_performance['avg_reward']:.2f}")
         print(f"Final average moving cost: {final_performance['moving_cost']:.4f}")
@@ -83,9 +98,9 @@ if __name__ == '__main__':
 
     elif args.eval is False: 
         if args.method == 'dqn':
-            dqn_training(envs, args.total_timesteps, args.num_steps, args.capture_video, model_weights_path=model_weights_path, batch_size=args.batch, train_name=run_name, cmd_log=args.cmd_log, explore=args.explore)
+            dqn_training(env, args.total_timesteps, args.num_steps, args.capture_video, model_weights_path=model_weights_path, batch_size=args.batch, train_name=run_name, cmd_log=args.cmd_log, explore=args.explore)
         elif args.method == 'qnet':
-            q_learning_training(envs, args.total_timesteps, args.num_steps, args.capture_video)   
+            q_learning_training(env, args.total_timesteps, args.num_steps, args.capture_video)   
         if args.method == 'mppo':
             agent = ppo_training(envs, args, run_name)  
     else: print("No method choosen or type error in parsing argument! Please use command like:\npython3 main.py --train_name czm1 --seed 31 --method mppo --train scratch --total_timesteps 100000 --num_steps 256 --cmd_log 5 --learning_rate 3e-5\nOr use --eval flag for evaluation, which requires the specification of model_weights")

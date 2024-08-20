@@ -1,14 +1,14 @@
 import numpy as np
 import time
-from map_generator import map_to_value
-from global_mapper import find_path, return_path
+from environment.map_generator import map_to_value
+from environment.global_mapper import find_path, return_path
 import os
 import matplotlib.pyplot as plt
 import torch
-from ppo_agent import PPOAgent
-from cnn_for_ppo import CNNLSTM
+from agents.ppo_agent import PPOAgent
+from agents.cnn_for_ppo import CNNLSTM
 
-def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode, eval_folder='G2RL-Path-Planning/eval_images'):
+def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode, eval_folder='G2RL-Path-Planning/eval/eval_images'):
     """
     Saves an evaluation image showing the environment, start and end positions, agent's path, and optimal path.
 

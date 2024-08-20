@@ -3,10 +3,6 @@ import torch.nn as nn
 from functools import reduce
 from collections import OrderedDict
 
-import torch
-import torch.nn as nn
-from functools import reduce
-
 def print_model_summary_dqn(model, input_size, batch_size):
     def register_hook(module):
         def hook(module, input, output):

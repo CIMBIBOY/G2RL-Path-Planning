@@ -1,8 +1,7 @@
 import torch
 import random
 import time
-from eval import evaluate_performance
-import pickle
+from eval.eval import evaluate_performance
 import numpy as np
 
 

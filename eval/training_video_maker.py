@@ -41,4 +41,4 @@ def create_video_from_images(image_folder, train_number, video_name='train_x_vid
 # Generate video
 train_name = 'czm1_mppo_42_114811'
 
-create_video_from_images(f'training_images/{train_name}', train_name, f'{train_name}.avi', fps=7, codec='MJPG', scale=10)
+create_video_from_images(f'eval/training_images/{train_name}', train_name, f'{train_name}.avi', fps=7, codec='MJPG', scale=10)

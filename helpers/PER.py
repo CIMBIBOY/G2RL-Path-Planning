@@ -1,7 +1,6 @@
 # PER.py
 
 import numpy as np
-import random
 
 class PrioritizedReplayBuffer:
     def __init__(self, capacity, alpha=0.6, beta=0.4, beta_increment=0.001):

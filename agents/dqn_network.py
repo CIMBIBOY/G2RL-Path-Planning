@@ -1,12 +1,12 @@
 import torch
-from model_summary import print_model_summary_dqn
-from DQN import Agent
-from cnn_for_dqn import CNNLSTMActor
+from helpers.model_summary import print_model_summary_dqn
+from agents.DQN import Agent
+from agents.cnn_for_dqn import CNNLSTMActor
 import progressbar
 import time
-from eval import evaluate_performance
+from eval.eval import evaluate_performance
 import numpy as np
-from train_utils import debug_start, debug_end
+from helpers.utils import debug_start, debug_end
 
 # DQN training script
 def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_images = False, device = "cpu", model_weights_path=None, batch_size = 32, train_name = 'train', cmd_log = 5, explore = 200000):
@@ -127,7 +127,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
             if (e + 1) % 1000 == 0: 
                 print(f"Is CUDA being used? {next(agent.q_network.parameters()).is_cuda}\n")
                 # Save the model weights
-                torch.save(agent.q_network.state_dict(), f'./weights/{train_name}.pth')  # For DQN
+                torch.save(agent.q_network.state_dict(), f'./eval/weights/{train_name}.pth')  # For DQN
                 
         print(" ---------- Training Finished ----------")
 
@@ -138,6 +138,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
 
     finally:
         # Save the training metrics
-        np.save(f'./models/episode_rewards_{train_name}.npy', all_episode_rewards)
-        np.savez(f'./models/metrics_{train_name}.npz', rewards=all_episode_rewards, losses=all_episode_losses)
+        np.save(f'./log/models/episode_rewards_{train_name}.npy', all_episode_rewards)
+        np.savez(f'./log/models/metrics_{train_name}.npz', rewards=all_episode_rewards, losses=all_episode_losses)
         

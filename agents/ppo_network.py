@@ -2,11 +2,11 @@
 
 import torch
 import numpy as np
-from ppo_agent import PPOAgent
-from cnn_for_ppo import CNNLSTM
-from eval import evaluate_performance
+from agents.ppo_agent import PPOAgent
+from agents.cnn_for_ppo import CNNLSTM
+from eval.eval import evaluate_performance
 import time
-from model_summary import print_model_summary_ppo
+from helpers.model_summary import print_model_summary_ppo
 
 def ppo_training(env, args, train_name):
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
