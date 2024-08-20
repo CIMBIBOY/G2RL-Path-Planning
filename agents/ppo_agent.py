@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 class PPOAgent(nn.Module):
-    def __init__(self, env, model, args, run_name):
+    def __init__(self, env, model, args, run_name, writer, wandb):
         super().__init__()
         self.env = env
         self.model = model
@@ -16,6 +16,8 @@ class PPOAgent(nn.Module):
         self.device = torch.device("cuda" if args.cuda else "cpu")
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.learning_rate, eps=1e-5)
+        self.writer = writer
+        self.wandb = wandb
 
     def save(self, path):
         torch.save({
@@ -100,8 +102,12 @@ class PPOAgent(nn.Module):
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:
                     break
+        
+        y_pred, y_true = values.cpu().numpy(), returns.cpu().numpy()
+        var_y = np.var(y_true)
+        explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        return pg_loss.item(), v_loss.item(), entropy_loss.item(), old_approx_kl.item(), approx_kl.item(), clipfracs
+        return pg_loss.item(), v_loss.item(), entropy_loss.item(), old_approx_kl.item(), approx_kl.item(), clipfracs, explained_var
 
     def learn(self):
         num_updates = self.args.total_timesteps // self.args.batch_size
@@ -226,7 +232,7 @@ class PPOAgent(nn.Module):
             b_dones = dones.reshape(-1)
 
             # Optimizing the policy and value network
-            pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl, clipfracs = self.update(
+            pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl, clipfracs, explained_var = self.update(
                 b_obs, b_actions, b_logprobs, b_advantages, b_returns, b_values, initial_lstm_state, b_dones
             )
 
@@ -248,7 +254,38 @@ class PPOAgent(nn.Module):
                 batch_rewards = []
 
             if update % self.args.cmd_log * 10 == 0:
+                # Save model weights
                 self.save(f'./eval/weights/{self.run_name}.pth')
+
+                # TRY NOT TO MODIFY: record rewards for plotting purposes
+                self.writer.add_scalar("logs/charts/learning_rate", self.optimizer.param_groups[0]["lr"], global_step)
+                self.writer.add_scalar("logs/losses/value_loss", v_loss.item(), global_step)
+                self.writer.add_scalar("logs/losses/policy_loss", pg_loss.item(), global_step)
+                self.writer.add_scalar("logs/losses/entropy", entropy_loss.item(), global_step)
+                self.writer.add_scalar("logs/losses/old_approx_kl", old_approx_kl.item(), global_step)
+                self.writer.add_scalar("logs/losses/approx_kl", approx_kl.item(), global_step)
+                self.writer.add_scalar("logs/losses/clipfrac", np.mean(clipfracs), global_step)
+                self.writer.add_scalar("logs/losses/explained_variance", explained_var, global_step)
+                print("SPS:", int(global_step / (time.time() - start_time)))
+                self.writer.add_scalar("logs/charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+
+                # Log to wandb
+                if self.args.track:
+                    self.wandb.log({
+                        "learning_rate": self.optimizer.param_groups[0]["lr"],
+                        "value_loss": v_loss.item(),
+                        "policy_loss": pg_loss.item(),
+                        "entropy_loss": entropy_loss.item(),
+                        "old_approx_kl": old_approx_kl.item(),
+                        "approx_kl": approx_kl.item(),
+                        "clipfrac": np.mean(clipfracs),
+                        "explained_variance": explained_var,
+                        "SPS": int(global_step / (time.time() - start_time)),
+                        "Reached goals": int(self.env.terminations[0]), 
+                        "Lost guidance information": int(self.env.terminations[1]), 
+                        "Max steps reached": int(self.env.terminations[2]),
+                        "Collisions with obstacles": int(self.env.terminations[3])
+                    }, step=global_step)
 
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:

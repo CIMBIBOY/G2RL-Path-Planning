@@ -14,7 +14,7 @@ from eval.eval import evaluate_performance
 import gym
 
 '''
-python3 main.py --train_name cimbi --cuda --seed 160 --method mppo --train scratch --total_timesteps 12800000 --num_steps 2048 --cmd_log 10 --learning_rate 3e-5 --num_envs 4 
+python3 main.py --train_name titan --cuda --seed 160 --method mppo --train scratch --total_timesteps 12800000 --num_steps 2048 --cmd_log 10 --learning_rate 3e-5 --num_envs 4 --track
 
 python3 main.py --train_name czm1 --seed 31 --method mppo --train retrain --model_weights eval/weights/czm1_mppo_31_1724005169.pth --total_timesteps 1280 --num_steps 128 --cmd_log 5 --learning_rate 3e-5 
 
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         elif args.method == 'qnet':
             q_learning_training(env, args.total_timesteps, args.num_steps, args.capture_video)   
         if args.method == 'mppo':
-            agent = ppo_training(envs, args, run_name)  
+            agent = ppo_training(envs, args, run_name, writer, wandb=wandb)  
     else: print("No method choosen or type error in parsing argument! Please use command like:\npython3 main.py --train_name czm1 --seed 31 --method mppo --train scratch --total_timesteps 100000 --num_steps 256 --cmd_log 5 --learning_rate 3e-5\nOr use --eval flag for evaluation, which requires the specification of model_weights")
 
     envs.close()

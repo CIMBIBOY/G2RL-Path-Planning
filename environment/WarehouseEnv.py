@@ -82,7 +82,7 @@ class WarehouseEnvironment:
         self.pygame_render = pygame_render
         self.screen = None
         self.clock = None
-        self.use_past = True
+        self.use_past = False
 
         self.info = {
             'R_max_step': False,

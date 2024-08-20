@@ -6,4 +6,5 @@ __pycache__
 eval/weights/
 runs/
 wandb/
-logs/
+logs/models
+logs/runs

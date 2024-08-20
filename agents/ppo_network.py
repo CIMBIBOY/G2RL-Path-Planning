@@ -8,12 +8,12 @@ from eval.eval import evaluate_performance
 import time
 from helpers.model_summary import print_model_summary_ppo
 
-def ppo_training(env, args, train_name):
+def ppo_training(env, args, train_name, writer, wandb):
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     print(f"Currently running training on device: {device}")
 
     model = CNNLSTM().to(device)
-    agent = PPOAgent(env, model, args, train_name)
+    agent = PPOAgent(env, model, args, train_name, writer, wandb)
 
     if args.model_weights:
         try:
