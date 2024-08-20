@@ -260,7 +260,7 @@ class PPOAgent(nn.Module):
                 print(f"KL Divergence: {approx_kl:.4f}")
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
                 print(f"Steps taken in {update} update: {steps}")
-                print(f"Terminations casued by:\nReached goals: {np.mean(mean_terminations_rg):.0f}, No guidance information: {mean_terminations_gi:.0f}, Max steps reached: {mean_terminations_ms:.0f}, Collisions with obstacles: {mean_terminations_oc:.0f}\n")
+                print(f"Terminations casued by:\nReached goals: {np.mean(mean_terminations_rg):.0f}, No guidance information: {np.mean(mean_terminations_gi):.0f}, Max steps reached: {np.mean(mean_terminations_ms):.0f}, Collisions with obstacles: {np.mean(mean_terminations_oc):.0f}\n")
                 start_time = time.time()
                 steps = 0
                 batch_rewards = []
