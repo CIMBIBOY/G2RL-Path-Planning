@@ -192,9 +192,7 @@ class PPOAgent(nn.Module):
                     print(f"{self.env.episode_count}'th episode finished.\nInfo:")
                     for key, value in info.items():
                         print(f"  {key}: {value}")
-                    #'''
-                    self.env.reset()
-                    break   
+                    #''' 
 
             # bootstrap value if not done
             with torch.no_grad():
