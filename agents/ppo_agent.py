@@ -236,7 +236,7 @@ class PPOAgent(nn.Module):
                 b_obs, b_actions, b_logprobs, b_advantages, b_returns, b_values, initial_lstm_state, b_dones
             )
 
-            print("SPS:", int(global_step / (time.time() - start_time)))
+            print(f"For update number: {update}, SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
 
             mean_terminations_rg = np.zeros(1)
             mean_terminations_gi = np.zeros(1)
@@ -286,6 +286,7 @@ class PPOAgent(nn.Module):
                 print(f"Steps taken in {update} update: {steps}")
                 print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}, Collisions with obstacles: {int(mean_terminations_oc)}\n")
                 print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
+                print(f" ---------------------------------------------------- ")
                 start_time = time.time()
                 steps = 0
                 batch_rewards = []

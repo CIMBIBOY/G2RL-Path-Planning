@@ -419,7 +419,7 @@ if __name__ == "__main__":
         writer.add_scalar("logs/losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("logs/losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("logs/losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
+        print("SPS (Steps Per Second):", int(global_step / (time.time() - start_time)))
         writer.add_scalar("logs/charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     envs.close()
