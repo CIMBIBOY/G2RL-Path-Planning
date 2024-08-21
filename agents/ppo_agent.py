@@ -236,21 +236,44 @@ class PPOAgent(nn.Module):
                 b_obs, b_actions, b_logprobs, b_advantages, b_returns, b_values, initial_lstm_state, b_dones
             )
 
+            print("SPS:", int(global_step / (time.time() - start_time)))
+
+            mean_terminations_rg = np.zeros(1)
+            mean_terminations_gi = np.zeros(1)
+            mean_terminations_ms = np.zeros(1)
+            mean_terminations_oc = np.zeros(1)
+
+            curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(4))
+
+            for i in range(self.args.num_envs):
+                mean_terminations_rg += self.env.envs[i].terminations[0]
+                mean_terminations_gi += self.env.envs[i].terminations[1]
+                mean_terminations_ms += self.env.envs[i].terminations[2]
+                mean_terminations_oc += self.env.envs[i].terminations[3]
+
+            # Log to wandb
+            if self.args.track:
+                self.wandb.log({
+                    "learning_rate": self.optimizer.param_groups[0]["lr"],
+                    "value_loss": v_loss,
+                    "policy_loss": pg_loss,
+                    "entropy_loss": entropy_loss,
+                    "old_approx_kl": old_approx_kl,
+                    "approx_kl": approx_kl,
+                    "clipfrac": np.mean(clipfracs),
+                    "explained_variance": explained_var,
+                    "SPS": int(global_step / (time.time() - start_time)),
+                    "Reached goals": int(mean_terminations_rg), 
+                    "Lost guidance information": int(mean_terminations_gi), 
+                    "Max steps reached": int(mean_terminations_ms),
+                    "Collisions with obstacles": int(mean_terminations_oc),
+                    "Current max dynamic objects": curr_amr_count,
+                    "Global Steps": global_step,
+                    "SPS": int(global_step / (time.time() - start_time)),
+                })
+
             # Update information
             if update % self.args.cmd_log == 0:
-                
-                mean_terminations_rg = np.zeros(1)
-                mean_terminations_gi = np.zeros(1)
-                mean_terminations_ms = np.zeros(1)
-                mean_terminations_oc = np.zeros(1)
-                curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(4))
-
-                for i in range(self.args.num_envs):
-                    mean_terminations_rg += self.env.envs[i].terminations[0]
-                    mean_terminations_gi += self.env.envs[i].terminations[1]
-                    mean_terminations_ms += self.env.envs[i].terminations[2]
-                    mean_terminations_oc += self.env.envs[i].terminations[3]
-
                 end_time = time.time()
                 computing_time = end_time - start_time
                 print(f" -------------------- Update: {update} -------------------- ")
@@ -266,38 +289,6 @@ class PPOAgent(nn.Module):
                 start_time = time.time()
                 steps = 0
                 batch_rewards = []
-
-                # Log to wandb
-                if self.args.track:
-                    self.wandb.log({
-                        "learning_rate": self.optimizer.param_groups[0]["lr"],
-                        "value_loss": v_loss,
-                        "policy_loss": pg_loss,
-                        "entropy_loss": entropy_loss,
-                        "old_approx_kl": old_approx_kl,
-                        "approx_kl": approx_kl,
-                        "clipfrac": np.mean(clipfracs),
-                        "explained_variance": explained_var,
-                        "SPS": int(global_step / (time.time() - start_time)),
-                        "Reached goals": int(mean_terminations_rg), 
-                        "Lost guidance information": int(mean_terminations_gi), 
-                        "Max steps reached": int(mean_terminations_ms),
-                        "Collisions with obstacles": int(mean_terminations_oc),
-                        "Current max dynamic objects": curr_amr_count,
-                        "Global Steps": global_step,
-                    })
-
-                # TRY NOT TO MODIFY: record rewards for plotting purposes
-                self.writer.add_scalar("logs/charts/learning_rate", self.optimizer.param_groups[0]["lr"], global_step)
-                self.writer.add_scalar("logs/losses/value_loss", v_loss, global_step)
-                self.writer.add_scalar("logs/losses/policy_loss", pg_loss, global_step)
-                self.writer.add_scalar("logs/losses/entropy", entropy_loss, global_step)
-                self.writer.add_scalar("logs/losses/old_approx_kl", old_approx_kl, global_step)
-                self.writer.add_scalar("logs/losses/approx_kl", approx_kl, global_step)
-                self.writer.add_scalar("logs/losses/clipfrac", np.mean(clipfracs), global_step)
-                self.writer.add_scalar("logs/losses/explained_variance", explained_var, global_step)
-                print("SPS:", int(global_step / (time.time() - start_time)))
-                self.writer.add_scalar("logs/charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
             if update % (self.args.cmd_log + 1) == 0:
                 # Save model weights
