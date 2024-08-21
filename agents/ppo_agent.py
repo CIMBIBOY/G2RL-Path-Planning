@@ -296,7 +296,7 @@ class PPOAgent(nn.Module):
                 print("SPS:", int(global_step / (time.time() - start_time)))
                 self.writer.add_scalar("logs/charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
-            if update % (self.args.cmd_log * 1) == 0:
+            if update % (self.args.cmd_log * 10) == 0:
                 # Save model weights
                 self.save(f'eval/weights/{self.run_name}.pth')
 
