@@ -76,7 +76,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     # Check if the agent has reached its goal
     if (h_new, w_new) == (agent_goal[0], agent_goal[1]):
         print(f"")
-        print(f"From start position: {agent_path[0]}, agent reached it's goal at: {agent_goal}")
+        print(f"From start position: {agent_path[0]}, agent reached it's goal at: {agent_goal} in {time_idx} timesteps")
         done = True
         info['goal_reached'] = True
         inst_arr[h_new, w_new] = [0, 255, 0]  # mark goal cell as green
