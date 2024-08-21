@@ -166,7 +166,9 @@ class WarehouseEnvironment:
         reset_state = self.dynamic_coords[self.agent_idx]
         
         # calc maximum steps
-        self.max_step = calculate_max_steps(self.agent_path_len)
+        self.max_step = 10000
+        # self.max_step = calculate_max_steps(self.agent_path_len)
+
         # initial distance
         start = reset_state[0]
         end = reset_state[-1]

@@ -246,10 +246,10 @@ class PPOAgent(nn.Module):
                 curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(4))
 
                 for i in range(self.args.num_envs):
-                    mean_terminations_rg[i] = self.env.envs[i].terminations[0]
-                    mean_terminations_gi[1] = self.env.envs[i].terminations[1]
-                    mean_terminations_ms[i] = self.env.envs[i].terminations[2]
-                    mean_terminations_oc[i] = self.env.envs[i].terminations[3]
+                    mean_terminations_rg[i] += self.env.envs[i].terminations[0]
+                    mean_terminations_gi[1] += self.env.envs[i].terminations[1]
+                    mean_terminations_ms[i] += self.env.envs[i].terminations[2]
+                    mean_terminations_oc[i] += self.env.envs[i].terminations[3]
 
                 end_time = time.time()
                 computing_time = end_time - start_time
@@ -261,7 +261,7 @@ class PPOAgent(nn.Module):
                 print(f"KL Divergence: {approx_kl:.4f}")
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
                 print(f"Steps taken in {update} update: {steps}")
-                print(f"Terminations casued by:\nReached goals: {int(np.mean(mean_terminations_rg))}, No guidance information: {int(np.mean(mean_terminations_gi))}, Max steps reached: {int(np.mean(mean_terminations_ms))}, Collisions with obstacles: {int(np.mean(mean_terminations_oc))}\n")
+                print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}, Collisions with obstacles: {int(mean_terminations_oc)}\n")
                 print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
                 start_time = time.time()
                 steps = 0
@@ -279,10 +279,10 @@ class PPOAgent(nn.Module):
                         "clipfrac": np.mean(clipfracs),
                         "explained_variance": explained_var,
                         "SPS": int(global_step / (time.time() - start_time)),
-                        "Reached goals": int(np.mean(mean_terminations_rg)), 
-                        "Lost guidance information": int(np.mean(mean_terminations_gi)), 
-                        "Max steps reached": int(np.mean(mean_terminations_ms)),
-                        "Collisions with obstacles": int(np.mean(mean_terminations_oc)),
+                        "Reached goals": int(mean_terminations_rg), 
+                        "Lost guidance information": int(mean_terminations_gi), 
+                        "Max steps reached": int(mean_terminations_ms),
+                        "Collisions with obstacles": int(mean_terminations_oc),
                         "Current max dynamic objects": curr_amr_count,
                         "Global Steps": global_step,
                     })
