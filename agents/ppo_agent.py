@@ -174,6 +174,7 @@ class PPOAgent(nn.Module):
                 # print(f"PPO action tensor: {action.cpu().numpy()}")
                 next_obs, reward, done, trunc, info = self.env.step(action.cpu().numpy())
                 termination_flags = np.logical_or(done, trunc)
+                print(f"Termination flags: {termination_flags}")
                 steps += 1
                 
                 if self.args.pygame:
@@ -185,14 +186,6 @@ class PPOAgent(nn.Module):
                 next_obs = torch.Tensor(next_obs).permute(1, 0, 2, 3, 4, 5).to(self.device)
                 # Convert the result to a tensor
                 next_done = torch.Tensor(termination_flags).to(self.device)
-
-                # Reset LSTM states for done episodes
-                if done.any():
-                    '''
-                    print(f"{self.env.episode_count}'th episode finished.\nInfo:")
-                    for key, value in info.items():
-                        print(f"  {key}: {value}")
-                    #''' 
 
             # bootstrap value if not done
             with torch.no_grad():
@@ -235,8 +228,6 @@ class PPOAgent(nn.Module):
             pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl, clipfracs, explained_var = self.update(
                 b_obs, b_actions, b_logprobs, b_advantages, b_returns, b_values, initial_lstm_state, b_dones
             )
-
-            print(f"For update number: {update}, SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
 
             mean_terminations_rg = np.zeros(1)
             mean_terminations_gi = np.zeros(1)
@@ -286,6 +277,7 @@ class PPOAgent(nn.Module):
                 print(f"Steps taken in {update} update: {steps}")
                 print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}, Collisions with obstacles: {int(mean_terminations_oc)}\n")
                 print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
+                print(f"SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
                 print(f" ---------------------------------------------------- ")
                 start_time = time.time()
                 steps = 0
