@@ -57,12 +57,12 @@ if __name__ == '__main__':
     if args.method == 'mppo':
         # Set up the parallel environments
         envs = gym.vector.SyncVectorEnv(
-            [make_custom_env(seed=args.seed, idx=i, height=48, width=48, amr_count=25, max_amr=25, pygame_render=args.pygame) for i in range(args.num_envs)]
+            [make_custom_env(seed=args.seed, idx=i, height=48, width=48, amr_count=2, max_amr=25, time_dimension=args.time_dim, pygame_render=args.pygame) for i in range(args.num_envs)]
         )
         # Reset num_envs number environment
         state, info = envs.reset()
-        print("For input shape expecting: (num_envs, batch_size, time_dim, obs_width, obs_height, chanels)")
-        print(f"State tensor (observation) dimension: {state.shape}")
+        print("\nFor input shape expecting: (num_envs, batch_size, time_dim, obs_width, obs_height, chanels)")
+        print(f"State tensor (observation) dimension: {state.shape}\n")
 
         # Setting long horizon for ppo
         for i in range(args.num_envs):
@@ -76,11 +76,11 @@ if __name__ == '__main__':
     elif args.eval or args.method != 'mppo': 
         if args.eval: args.seed += 1
         # Create single env
-        env = WarehouseEnvironment(pygame_render=args.pygame, seed = args.seed)
+        env = WarehouseEnvironment(time_dimension=args.time_dim, pygame_render=args.pygame, seed = args.seed)
         # Reset single number environment
         state, info = env.reset()
-        print("For input shape expecting: (num_envs, batch_size, time_dim, obs_width, obs_height, chanels)")
-        print(f"State tensor (observation) dimension: {state.shape}")
+        print("\nFor input shape expecting: (num_envs, batch_size, time_dim, obs_width, obs_height, chanels)")
+        print(f"State tensor (observation) dimension: {state.shape}\n")
         
         # Render the env
         if args.pygame:

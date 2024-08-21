@@ -56,7 +56,8 @@ class PPOAgent(nn.Module):
                     dones[mb_inds],
                     self.env,
                     self.device,
-                    actions.long()[mb_inds]
+                    actions.long()[mb_inds],
+                    self.args.num_envs
                 )
                 logratio = newlogprob - logprobs[mb_inds]
                 ratio = logratio.exp()
@@ -162,7 +163,7 @@ class PPOAgent(nn.Module):
 
                 with torch.no_grad():
                     action, logprob, entropy, value, next_lstm_state = self.model.get_action_and_value(
-                        next_obs, next_lstm_state, next_done, self.env, self.device
+                        next_obs, next_lstm_state, next_done, self.env, self.device, envs_num = self.args.num_envs
                     )
                     # print(action[0])
                     # print(logprob.shape)
@@ -174,7 +175,7 @@ class PPOAgent(nn.Module):
                 # print(f"PPO action tensor: {action.cpu().numpy()}")
                 next_obs, reward, done, trunc, info = self.env.step(action.cpu().numpy())
                 termination_flags = np.logical_or(done, trunc)
-                print(f"Termination flags: {termination_flags}")
+                # print(f"Termination flags: {termination_flags}")
                 steps += 1
                 
                 if self.args.pygame:
@@ -245,22 +246,22 @@ class PPOAgent(nn.Module):
             # Log to wandb
             if self.args.track:
                 self.wandb.log({
-                    "learning_rate": self.optimizer.param_groups[0]["lr"],
-                    "value_loss": v_loss,
-                    "policy_loss": pg_loss,
-                    "entropy_loss": entropy_loss,
-                    "old_approx_kl": old_approx_kl,
-                    "approx_kl": approx_kl,
-                    "clipfrac": np.mean(clipfracs),
-                    "explained_variance": explained_var,
-                    "SPS": int(global_step / (time.time() - start_time)),
-                    "Reached goals": int(mean_terminations_rg), 
-                    "Lost guidance information": int(mean_terminations_gi), 
-                    "Max steps reached": int(mean_terminations_ms),
-                    "Collisions with obstacles": int(mean_terminations_oc),
-                    "Current max dynamic objects": curr_amr_count,
-                    "Global Steps": global_step,
-                    "SPS": int(global_step / (time.time() - start_time)),
+                    "learning_rate": self.optimizer.param_groups[0]["lr"],  # Current learning rate used by the optimizer
+                    "value_loss": v_loss,  # Loss related to how well the agent predicts the value of states
+                    "policy_loss": pg_loss,  # Loss related to how well the agent learns to choose actions
+                    "entropy_loss": entropy_loss,  # Entropy of the policy, indicating the randomness of action selection
+                    "old_approx_kl": old_approx_kl,  # KL divergence between the old and new policy, indicating the change in policy
+                    "approx_kl": approx_kl,  # Another measure of KL divergence to monitor policy updates
+                    "clipfrac": np.mean(clipfracs),  # Fraction of updates where policy change was clipped to prevent large updates
+                    "explained_variance": explained_var,  # Proportion of variance in returns explained by the value function
+                    "SPS": int(global_step / (time.time() - start_time)),  # Steps Per Second, indicating the speed of training
+                    "Reached goals": int(mean_terminations_rg),  # Count of episodes where the agent successfully reached the goal
+                    "Lost guidance information": int(mean_terminations_gi),  # Count of episodes terminated due to loss of guidance
+                    "Max steps reached": int(mean_terminations_ms),  # Count of episodes terminated due to reaching maximum steps
+                    "Collisions with obstacles": int(mean_terminations_oc),  # Count of episodes terminated due to collisions
+                    "Current max dynamic objects": curr_amr_count,  # Current number of dynamic objects, indicating environment complexity
+                    "Global Steps": global_step,  # Total number of steps taken across all environments
+                    "SPS": int(global_step / (time.time() - start_time)),  # Steps Per Second, reiterating the training speed
                 })
 
             # Update information

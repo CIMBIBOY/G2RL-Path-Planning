@@ -7,12 +7,12 @@ from agents.cnn_for_ppo import CNNLSTM
 from eval.eval import evaluate_performance
 import time
 from helpers.model_summary import print_model_summary_ppo
+from environment.WarehouseEnv import WarehouseEnvironment
 
 def ppo_training(env, args, train_name, writer, wandb):
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
-    print(f"Currently running training on device: {device}")
 
-    model = CNNLSTM().to(device)
+    model = CNNLSTM(args.time_dim).to(device)
     agent = PPOAgent(env, model, args, train_name, writer, wandb)
 
     if args.model_weights:
@@ -24,9 +24,14 @@ def ppo_training(env, args, train_name, writer, wandb):
             print(f"Error loading model weights: {e}")
             time.sleep(2)
     
-    # print_model_summary_ppo(model, (args.batch_size, 4, 1, 30, 30, 4), args.batch_size, env, device)
+    # Define the input size
+    input_size = (args.batch_size, args.num_envs, args.time_dim, 30, 30, 4)  # (num_envs, batch_size, time_dim, height, width, channels)
+
+    # Call the print_model_summary_ppo function once before starting the training
+    print_model_summary_ppo(model, input_size, env, device)
+
     print(f" Total number of training updates: {int(args.total_timesteps // args.batch_size)}")
-    print(" ---------- Training Started ----------")
+    print(" ----------------- Training Started -----------------")
 
     pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl = agent.learn()
 

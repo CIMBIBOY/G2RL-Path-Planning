@@ -13,20 +13,12 @@ from gym.spaces import Box, Discrete
 from gym.utils import seeding
 import random
 
-from stable_baselines3.common.atari_wrappers import (  # isort:skip
-    ClipRewardEnv,
-    EpisodicLifeEnv,
-    FireResetEnv,
-    MaxAndSkipEnv,
-    NoopResetEnv,
-)
-
 def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 class WarehouseEnvironment:
 
-    def __init__(self,height = 48, width = 48, amr_count = 2, max_amr = 25, agent_idx = 0, local_fov = 15, pygame_render = True, seed = None):
+    def __init__(self,height = 48, width = 48, amr_count = 2, max_amr = 25, agent_idx = 0, local_fov = 15, time_dimension = 1, pygame_render = True, seed = None):
 
         assert height == 48 and width == 48, "We are not currently supporting other dimensions"
         # Initial map address
@@ -43,17 +35,17 @@ class WarehouseEnvironment:
         self.width = width
         # state space dimension
         self.n_states = height * width
+        # Number of historical observations to use
+        self.Nt = time_dimension
+        # Buffer to store past observations to store last 4 observations
+        self.observation_history = deque(maxlen=self.Nt)
+        self.initial_random_steps = False
         # observation space
-        self.observation_space = Box(low=0, high=255, shape=(1, 1, 30, 30, 4), dtype=np.uint8)
+        self.observation_space = Box(low=0, high=255, shape=(1, self.Nt, 30, 30, 4), dtype=np.uint8)
         # action space dim
         self.n_actions = len(self.f_action_space())
         # Define action space
         self.action_space = Discrete(self.n_actions)
-        # Number of historical observations to use
-        self.Nt = 4 
-        self.initial_random_steps = False
-        # Buffer to store past observations to store last 4 observations
-        self.observation_history = deque(maxlen=self.Nt)
         # Agent id
         self.agent_idx = agent_idx
         # Agent's path length 
@@ -85,7 +77,6 @@ class WarehouseEnvironment:
         self.pygame_render = pygame_render
         self.screen = None
         self.clock = None
-        self.use_past = False
 
         self.info = {
             'R_max_step': False,
@@ -223,7 +214,7 @@ class WarehouseEnvironment:
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.terminations, self.stays, self.info, self.fast_obj_idx
+            self.cells_skipped, self.dist, self.agent_goal, self.terminations, self.stays, self.info, self.fast_obj_idx, self.agent_path_len
         )
 
         self.steps += 1
@@ -257,30 +248,35 @@ class WarehouseEnvironment:
             combined_arr = symmetric_pad_array(combined_arr, target_array, 255)
             combined_arr = combined_arr.reshape(1,1,combined_arr.shape[0], combined_arr.shape[1], combined_arr.shape[2])
         
-        if self.use_past: 
-            if len(combined_arr) > 0:
-                if len(self.observation_history) < self.Nt:
+        if len(combined_arr) > 0:
+            if len(self.observation_history) < self.Nt:
+                for _ in range(self.Nt):
                     self.observation_history.append(combined_arr)
-                    self.observation_history.append(combined_arr)
-                    self.observation_history.append(combined_arr)
-                    self.observation_history.append(combined_arr)
-                    self.initial_random_steps = True
-                else:
-                    # Remove the oldest observation and add the new one
-                    self.observation_history.popleft()
-                    self.observation_history.append(combined_arr)
-        
+                self.initial_random_steps = True
+            else:
+                # Remove the oldest observation and add the new one
+                self.observation_history.popleft()
+                self.observation_history.append(combined_arr)
+    
         
         if self.initial_random_steps == False:
             # Return the single observation during initial steps
             return_values = (combined_arr, rewards, done, trunc, self.info)
         else:
-            if self.use_past:
-                # Return the stacked state after we have enough observations
-                stacked_state = self.get_stacked_state()
-                return_values = (stacked_state, rewards, done, trunc, self.info)
+            # Return the stacked state after we have enough observations
+            stacked_state = self.get_stacked_state()
+            return_values = (stacked_state, rewards, done, trunc, self.info)
             
         return return_values
+    
+    def get_stacked_state(self):
+        # Ensure we have exactly Nt observations
+        assert len(self.observation_history) == self.Nt, f"Expected {self.Nt} observations, but got {len(self.observation_history)}"
+        
+        # Stack the observations along the second axis (axis=1)
+        stacked_state = np.concatenate(list(self.observation_history), axis=1)
+
+        return stacked_state
     
     def f_action_space(self):
         # action space
@@ -292,15 +288,6 @@ class WarehouseEnvironment:
             4:['idle',0,0]
         }
         return list(self.action_dict.keys())
-    
-    def get_stacked_state(self):
-        # Ensure we have exactly Nt observations
-        assert len(self.observation_history) == self.Nt, f"Expected {self.Nt} observations, but got {len(self.observation_history)}"
-        
-        # Stack the observations along the second axis (axis=1)
-        stacked_state = np.concatenate(list(self.observation_history), axis=1)
-
-        return stacked_state
     
     def get_action_mask(self, device):
         """Return a mask of valid actions, where 1 indicates a valid action and 0 indicates an invalid action."""

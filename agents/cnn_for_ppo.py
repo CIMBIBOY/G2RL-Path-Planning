@@ -9,9 +9,9 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, dropout_rate=0.2):
+    def __init__(self, in_channels, out_channels, time_dimension, dropout_rate=0.2):
         super(ConvBlock, self).__init__()
-        self.conv1 = layer_init(nn.Conv3d(in_channels, out_channels, kernel_size=(1, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)))
+        self.conv1 = layer_init(nn.Conv3d(in_channels, out_channels, kernel_size=(int(time_dimension/2), 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)))
         self.bn1 = nn.BatchNorm3d(out_channels)
         self.conv2 = layer_init(nn.Conv3d(out_channels, out_channels, kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
         self.bn2 = nn.BatchNorm3d(out_channels)
@@ -29,12 +29,12 @@ class ConvBlock(nn.Module):
         return x
 
 class CNNLSTM(nn.Module):
-    def __init__(self):
+    def __init__(self, time_dim = 1):
         super(CNNLSTM, self).__init__()
         self.conv_blocks = nn.Sequential(
-            ConvBlock(4, 32),
-            ConvBlock(32, 64),
-            ConvBlock(64, 128),
+            ConvBlock(4, 32, time_dim),
+            ConvBlock(32, 64, time_dim),
+            ConvBlock(64, 128, time_dim),
         )
         
         self.flatten = nn.Flatten()
@@ -54,9 +54,8 @@ class CNNLSTM(nn.Module):
         self.debug = False
 
     def get_states(self, x, lstm_state, done):
-
+        # Constructed get_states so it works with concatenated past observations (nt time dimension > 1) - leveraging observation_history 
         batch_size, num_envs, nt, height, width, channels = x.shape
-        # TODO: Construct get_states so it works with concatenated past observations (nt time dimension > 1) - leverage observation_history 
 
         if self.debug:
             print(f"Debug get_states: x tensor shape: {x.shape}, done: {done.shape} ")
@@ -116,36 +115,38 @@ class CNNLSTM(nn.Module):
         hidden, _ = self.get_states(x, lstm_state, done)
         return self.critic(hidden)
 
-    def get_action_and_value(self, x, lstm_state, done, env, device, action=None):
+    def get_action_and_value(self, x, lstm_state, done, env, device, action=None, envs_num = 4):
         # Get action masks for all environments
         if self.debug:
-            print(f"Input shape: x tensor: {x.shape}, done shape: {done}")
-        masks = []
-        for i in range(x.shape[1]):  # Iterate over each environment
-            mask = env.envs[i].get_action_mask(device)  # Get the action mask for each environment
-            masks.append(mask)
+            print(f"Input shape: x tensor: {x.shape}, done shape: {done.shape}")
+        if envs_num > 1:
+            masks = []
+            for i in range(x.shape[1]):  # Iterate over each environment
+                mask = env.envs[i].get_action_mask(device)  # Get the action mask for each environment
+                masks.append(mask)
 
-        # Stack the masks into a single tensor
-        masks = torch.stack(masks)  # Shape: (num_envs, num_actions)
-        if self.debug:
-            print("Action Mask Matrix:")
-            print(masks)
-            print(f"Mask shape: {mask.shape}")
+            # Stack the masks into a single tensor
+            masks = torch.stack(masks)  # Shape: (num_envs, num_actions)
+            if self.debug:
+                print("Action Mask Matrix:")
+                print(masks)
+                print(f"Mask shape: {mask.shape}")
+        else: masks = env.get_action_mask(device)
 
         hidden, lstm_state = self.get_states(x, lstm_state, done)
         if self.debug:
             print(f"Hidden shape: {hidden.shape}")
         logits = self.actor(hidden)
         if self.debug:
-            print("Logits Matrix Before Masking:")
-            print(logits)
+            # print("Logits Matrix Before Masking:")
+            # print(logits)
             print(f"logits shape: {logits.shape}")
 
         # Action masking: Apply masks to logits
         action_logits = logits + (1.0 - masks) * (-1e9)  # Penalize invalid actions with a large negative value
         if self.debug:
-            print("Logits Matrix After Masking:")
-            print(action_logits)
+            # print("Logits Matrix After Masking:")
+            # print(action_logits)
             print(f"action logits shape: {action_logits.shape}")
 
         probs = Categorical(logits=action_logits)

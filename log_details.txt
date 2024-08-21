@@ -1,0 +1,44 @@
+1.	Learning Rate (learning_rate):
+	•	What it logs: The current learning rate used by the optimizer.
+	•	Interpretation: This value controls how much the model’s parameters are adjusted with respect to the gradient. In many training setups, the learning rate might be annealed (reduced) over time.
+	•	Good Value: Depends on the problem, but a common strategy is to start with a higher learning rate and reduce it as training progresses. A learning rate that is too high might lead to unstable training, while one that is too low might result in slow learning.
+2.	Value Loss (value_loss):
+	•	What it logs: The loss related to the value function (i.e., how well the agent is predicting the value of states).
+	•	Interpretation: The value function estimates the expected return (future rewards) from a given state. A high value loss might indicate that the model is struggling to predict these returns accurately.
+	•	Good Value: Ideally, this should decrease over time as the model learns better state-value estimates.
+3.	Policy Loss (policy_loss):
+	•	What it logs: The loss related to the policy (i.e., how well the agent is learning to choose actions).
+	•	Interpretation: This loss guides the agent in improving its actions to maximize cumulative rewards. A high policy loss might indicate issues with the policy network or the exploration-exploitation balance.
+	•	Good Value: Similar to value loss, this should generally decrease over time as the policy improves, though fluctuations can occur.
+4.	Entropy Loss (entropy_loss):
+	•	What it logs: The entropy of the policy, which measures the randomness of the action selection.
+	•	Interpretation: Higher entropy indicates more exploration, while lower entropy suggests more exploitation. Maintaining a balance is crucial.
+	•	Good Value: You want this to be high initially (indicating exploration) and decrease over time as the policy becomes more confident in choosing actions.
+5.	Old Approx KL (old_approx_kl) and Approx KL (approx_kl):
+	•	What it logs: The Kullback-Leibler (KL) divergence between the old policy and the new policy.
+	•	Interpretation: KL divergence measures how much the policy has changed during an update. High KL values may indicate large, potentially destabilizing policy updates.
+	•	Good Value: Should be small, indicating that updates to the policy are not too drastic. Some RL algorithms (like PPO) specifically control for this to avoid large policy shifts.
+6.	Clip Fraction (clipfrac):
+	•	What it logs: The fraction of updates where the policy change was clipped.
+	•	Interpretation: This is relevant in algorithms like PPO, which use clipping to prevent large updates to the policy. A high clip fraction indicates that many updates were large enough to require clipping.
+	•	Good Value: Should be small to moderate, indicating that the policy updates are under control.
+7.	Explained Variance (explained_variance):
+	•	What it logs: The proportion of the variance in the returns that is predictable from the value estimates.
+	•	Interpretation: This metric indicates how well the value function is explaining the variability in the returns. A higher value is better.
+	•	Good Value: Values close to 1 are good, indicating that the value function is explaining most of the variance in returns. Negative values suggest poor performance.
+8.	Steps Per Second (SPS):
+	•	What it logs: The number of environment steps processed per second.
+	•	Interpretation: This measures the speed of training. Higher values indicate faster training, which is generally desirable.
+	•	Good Value: Depends on the computational resources and environment complexity, but higher is better for efficiency.
+9.	Termination Causes (Reached goals, Lost guidance information, Max steps reached, Collisions with obstacles):
+	•	What it logs: Counts or averages of specific termination conditions in the environment.
+	•	Interpretation: These metrics track how episodes are ending, which can give insights into the agent’s behavior and learning progress.
+	•	Good Value: Ideally, you’d want more terminations due to “Reached goals” and fewer due to “Lost guidance information”, “Max steps reached”, or “Collisions with obstacles”.
+10.	Current Max Dynamic Objects (Current max dynamic objects):
+	•	What it logs: The current number of dynamic objects in the environment, typically increasing as the agent learns.
+	•	Interpretation: This is related to the curriculum learning strategy where the environment’s difficulty increases as the agent improves.
+	•	Good Value: Should increase over time, indicating that the agent is handling more complex scenarios.
+11.	Global Steps (Global Steps):
+	•	What it logs: The total number of steps taken across all environments.
+	•	Interpretation: A measure of how far along training has progressed.
+	•	Good Value: More steps generally correlate with more training, but efficiency in learning is also crucial.

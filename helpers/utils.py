@@ -24,7 +24,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
 
 # Function to set the seed for reproducibility
 def set_seed(seed, determism):
-    print(f"Runtime is seeded '{seed}' for all operations")
+    print(f"\nRuntime is seeded '{seed}' for all operations")
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -73,8 +73,10 @@ def calculate_max_steps(path_len):
     # Scale to our desired range and round to nearest integer
     return round(min_steps + (max_steps - min_steps) * combined)
 
+'''
 print("Path Length | Max Steps")
 print("------------------------")
 for length in [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]:
     max_steps = calculate_max_steps(length)
     print(f"{length:11d} | {max_steps:9d}")
+'''
