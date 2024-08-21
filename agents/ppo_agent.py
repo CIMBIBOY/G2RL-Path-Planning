@@ -247,9 +247,9 @@ class PPOAgent(nn.Module):
 
                 for i in range(self.args.num_envs):
                     mean_terminations_rg[i] = self.env.envs[i].terminations[0]
-                    mean_terminations_rg[1] = self.env.envs[i].terminations[1]
-                    mean_terminations_rg[i] = self.env.envs[i].terminations[2]
-                    mean_terminations_rg[i] = self.env.envs[i].terminations[3]
+                    mean_terminations_gi[1] = self.env.envs[i].terminations[1]
+                    mean_terminations_ms[i] = self.env.envs[i].terminations[2]
+                    mean_terminations_oc[i] = self.env.envs[i].terminations[3]
 
                 end_time = time.time()
                 computing_time = end_time - start_time
