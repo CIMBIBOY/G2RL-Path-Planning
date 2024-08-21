@@ -240,6 +240,7 @@ class PPOAgent(nn.Module):
             if update % self.args.cmd_log == 0:
                 
                 mean_terminations_rg = mean_terminations_gi = mean_terminations_ms = mean_terminations_oc = np.zeros(4)
+                curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(4))
 
                 for i in range(self.args.num_envs):
                     mean_terminations_rg[i] = self.env.envs[i].terminations[0]
@@ -258,6 +259,7 @@ class PPOAgent(nn.Module):
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
                 print(f"Steps taken in {update} update: {steps}")
                 print(f"Terminations casued by:\nReached goals: {int(np.mean(mean_terminations_rg))}, No guidance information: {int(np.mean(mean_terminations_gi))}, Max steps reached: {int(np.mean(mean_terminations_ms))}, Collisions with obstacles: {int(np.mean(mean_terminations_oc))}\n")
+                print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
                 start_time = time.time()
                 steps = 0
                 batch_rewards = []
@@ -278,6 +280,7 @@ class PPOAgent(nn.Module):
                         "Lost guidance information": int(np.mean(mean_terminations_gi)), 
                         "Max steps reached": int(np.mean(mean_terminations_ms)),
                         "Collisions with obstacles": int(np.mean(mean_terminations_oc)),
+                        "Current max dynamic objects": curr_amr_count,
                         "Global Steps": global_step,
                     })
 
@@ -295,7 +298,7 @@ class PPOAgent(nn.Module):
 
             if update % (self.args.cmd_log * 1) == 0:
                 # Save model weights
-                self.save(f'./eval/weights/{self.run_name}.pth')
+                self.save(f'eval/weights/{self.run_name}.pth')
 
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:

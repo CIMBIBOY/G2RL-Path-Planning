@@ -49,7 +49,7 @@ def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode
     plt.savefig(os.path.join(eval_folder, f'episode_{episode + 1}_eval.png'))
     plt.close()
 
-def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eval_images"):
+def evaluate_performance(env, args, num_episodes=100, agent = None, eval_folder="eval/eval_images", ):
     """
     Evaluates the performance of the agent in the WarehouseEnvironment.
 
@@ -64,8 +64,9 @@ def evaluate_performance(env, args, run_name, num_episodes=100, eval_folder="eva
     """
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
-    model = CNNLSTM().to(device)
-    agent = PPOAgent(env, model, args, run_name)
+    if agent == None:
+        model = CNNLSTM().to(device)
+        agent = PPOAgent(env, model, args, run_name)
 
     try:
         agent.load_model_only(args.model_weights)

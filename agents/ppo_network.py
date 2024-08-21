@@ -40,7 +40,7 @@ def ppo_training(env, args, train_name, writer, wandb):
 
     # Final evaluation
     print(" ---------- Final Evaluation ----------")
-    final_performance = evaluate_performance(env, agent, num_episodes=100)
+    final_performance = evaluate_performance(env.envs[0], args, num_episodes=100, agent = agent)
     print(f"Final average reward: {final_performance['avg_reward']:.2f}")
     print(f"Final average moving cost: {final_performance['moving_cost']:.4f}")
     print(f"Final average detour percentage: {final_performance['detour_percentage']:.2f}%")

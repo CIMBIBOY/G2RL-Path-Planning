@@ -14,7 +14,7 @@ from eval.eval import evaluate_performance
 import gym
 
 '''
-python3 main.py --train_name titan --cuda --seed 160 --method mppo --train scratch --total_timesteps 12800000 --num_steps 1024 --cmd_log 10 --learning_rate 3e-5 --num_envs 4 --track
+python3 main.py --train_name titan --cuda --seed 160 --method mppo --train scratch --total_timesteps 20480000 --num_steps 1024 --cmd_log 10 --learning_rate 3e-5 --num_envs 4 --track
 
 python3 main.py --train_name czm1 --seed 31 --method mppo --train retrain --model_weights eval/weights/czm1_mppo_31_1724005169.pth --total_timesteps 1280 --num_steps 128 --cmd_log 5 --learning_rate 3e-5 
 
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         model_weights_path = args.model_weights
 
     if args.eval and model_weights_path is not None:
-        final_performance = evaluate_performance(env, args, run_name, args.eval_steps)
+        final_performance = evaluate_performance(env, args, args.eval_steps, agent = None)
         print(f"Final average reward: {final_performance['avg_reward']:.2f}")
         print(f"Final average moving cost: {final_performance['moving_cost']:.4f}")
         print(f"Final average detour percentage: {final_performance['detour_percentage']:.2f}%")
