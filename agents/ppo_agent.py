@@ -173,6 +173,7 @@ class PPOAgent(nn.Module):
 
                 # print(f"PPO action tensor: {action.cpu().numpy()}")
                 next_obs, reward, done, trunc, info = self.env.step(action.cpu().numpy())
+                termination_flags = np.logical_or(done, trunc)
                 steps += 1
                 
                 if self.args.pygame:
@@ -182,7 +183,8 @@ class PPOAgent(nn.Module):
                 batch_rewards.append(reward)
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
                 next_obs = torch.Tensor(next_obs).permute(1, 0, 2, 3, 4, 5).to(self.device)
-                next_done = torch.Tensor(done).to(self.device)
+                # Convert the result to a tensor
+                next_done = torch.Tensor(termination_flags).to(self.device)
 
                 # Reset LSTM states for done episodes
                 if done.any():
