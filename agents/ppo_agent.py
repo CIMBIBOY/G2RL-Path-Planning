@@ -239,17 +239,17 @@ class PPOAgent(nn.Module):
             # Update information
             if update % self.args.cmd_log == 0:
                 
-                mean_terminations_rg = np.zeros(4)
-                mean_terminations_gi = np.zeros(4)
-                mean_terminations_ms = np.zeros(4)
-                mean_terminations_oc = np.zeros(4)
+                mean_terminations_rg = np.zeros(1)
+                mean_terminations_gi = np.zeros(1)
+                mean_terminations_ms = np.zeros(1)
+                mean_terminations_oc = np.zeros(1)
                 curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(4))
 
                 for i in range(self.args.num_envs):
-                    mean_terminations_rg[i] += self.env.envs[i].terminations[0]
-                    mean_terminations_gi[1] += self.env.envs[i].terminations[1]
-                    mean_terminations_ms[i] += self.env.envs[i].terminations[2]
-                    mean_terminations_oc[i] += self.env.envs[i].terminations[3]
+                    mean_terminations_rg += self.env.envs[i].terminations[0]
+                    mean_terminations_gi += self.env.envs[i].terminations[1]
+                    mean_terminations_ms += self.env.envs[i].terminations[2]
+                    mean_terminations_oc += self.env.envs[i].terminations[3]
 
                 end_time = time.time()
                 computing_time = end_time - start_time
