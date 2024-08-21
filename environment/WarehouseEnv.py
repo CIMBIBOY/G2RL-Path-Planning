@@ -171,7 +171,6 @@ class WarehouseEnvironment:
                     # 10% chance to keep every third coordinate
                     self.dynamic_coords[self.fast_obj_idx + idx] = path[::3]  # Keep every third position
                 
-
                 initial_pos = path[0]
                 self.init_arr[initial_pos[0], initial_pos[1]] = [0, 255, 0]  # Green color for fast objects
 

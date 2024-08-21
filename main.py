@@ -61,7 +61,8 @@ if __name__ == '__main__':
         )
         # Reset num_envs number environment
         state, info = envs.reset()
-        print(f"Input tensor dimension (state.shape): {state.shape}")
+        print("For input shape expecting: (num_envs, batch_size, time_dim, obs_width, obs_height, chanels)")
+        print(f"State tensor (observation) dimension: {state.shape}")
 
         # Setting long horizon for ppo
         for i in range(args.num_envs):
@@ -78,8 +79,9 @@ if __name__ == '__main__':
         env = WarehouseEnvironment(pygame_render=args.pygame, seed = args.seed)
         # Reset single number environment
         state, info = env.reset()
-        print(f"Input tensor dimension (state.shape): {state.shape}")
-
+        print("For input shape expecting: (num_envs, batch_size, time_dim, obs_width, obs_height, chanels)")
+        print(f"State tensor (observation) dimension: {state.shape}")
+        
         # Render the env
         if args.pygame:
             env.render() 
