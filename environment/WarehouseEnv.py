@@ -71,6 +71,7 @@ class WarehouseEnvironment:
         # Agent reached end position count 
         self.arrived = 0
         self.episode_count = -1
+        self.horizon = 'short'
         self.max_step = 42
        
         self.frames = []  # To store frames for .gif visualization
@@ -166,8 +167,9 @@ class WarehouseEnvironment:
         reset_state = self.dynamic_coords[self.agent_idx]
         
         # calc maximum steps
-        self.max_step = 10000
-        # self.max_step = calculate_max_steps(self.agent_path_len)
+        if self.horizon == 'long':
+            self.max_step = 10000
+        else: self.max_step = calculate_max_steps(self.agent_path_len)
 
         # initial distance
         start = reset_state[0]

@@ -63,6 +63,10 @@ if __name__ == '__main__':
         state, info = envs.reset()
         print(f"Input tensor dimension (state.shape): {state.shape}")
 
+        # Setting long horizon for ppo
+        for i in range(args.num_envs):
+            envs.envs[i].horizon = 'long'
+
         # Render the first env instance
         if args.pygame:
             envs.envs[0].render() 

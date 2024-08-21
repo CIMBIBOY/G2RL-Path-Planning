@@ -66,7 +66,7 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, eval_folder=
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     if agent == None:
         model = CNNLSTM().to(device)
-        agent = PPOAgent(env, model, args, run_name)
+        agent = PPOAgent(env, model, args, "eval_test")
 
     try:
         agent.load_model_only(args.model_weights)
