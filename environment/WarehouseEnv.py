@@ -118,7 +118,9 @@ class WarehouseEnvironment:
             # Implementing curriculum learning
             if self.arrived >= 10 and self.amr_count < self.max_amr: 
                 self.amr_count += 1
-                print(f"Dyanmic object added, current count: {self.amr_count}")
+                print(f"Dynamic object added, current count: {self.amr_count}")
+                if self.amr_count == self.fast_obj_idx:
+                    print(f"First fast dynamic object added, task got harder!")
 
             # Initialize all dynamic obstacles
             self.dynamic_coords, self.init_arr = initialize_objects(self.map_img_arr, self.amr_count, rng=self.np_random)
