@@ -32,5 +32,7 @@ My goal is to understand, experiment with, improve or even supplement the implem
 ## References
 
 [1] Binyu Wang et al., 2020, Mobile Robot Path Planning in Dynamic Environments through Globally Guided Reinforcement Learning [arXiv:2005.05420](https://arxiv.org/abs/2005.05420)
+
 [2] Qingbiao Li et al., 2019, Graph Neural Networks for Decentralized Multi-Robot Path Planning [arXiv:1912.06095](https://arxiv.org/abs/1912.06095)
+
 [3] Tom Schaul et al., 2016, Prioritized Experience Replay [arXiv:1511.05952](https://arxiv.org/abs/1511.05952)
