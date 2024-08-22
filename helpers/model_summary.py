@@ -146,7 +146,7 @@ def print_model_summary_ppo(model, input_size, envs, device):
         h.remove()
 
     # Print the correct input shape at the top
-    print("================================================================")
+    print("----------------------------------------------------------------")
     print(f'------------- Input shape: {input_size} -------------')
     print(" batch_size, num_envs, time_dim, obs_width, obs_height, channels")
     print("----------------------------------------------------------------")

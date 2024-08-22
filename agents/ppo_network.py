@@ -30,7 +30,7 @@ def ppo_training(env, args, train_name, writer, wandb):
     # Call the print_model_summary_ppo function once before starting the training
     print_model_summary_ppo(model, input_size, env, device)
 
-    print(f" Total number of training updates: {int(args.total_timesteps // args.batch_size)}")
+    print(f"\nTotal number of training updates: {int(args.total_timesteps // args.batch_size)}")
     print(" ----------------- Training Started -----------------")
 
     pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl = agent.learn()
