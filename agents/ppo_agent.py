@@ -284,6 +284,19 @@ class PPOAgent(nn.Module):
                 steps = 0
                 batch_rewards = []
 
+                '''
+                # TRY NOT TO MODIFY: record rewards for plotting purposes
+                self.writer.add_scalar("logs/charts/learning_rate", self.optimizer.param_groups[0]["lr"], global_step)
+                self.writer.add_scalar("logs/losses/value_loss", v_loss.item(), global_step)
+                self.writer.add_scalar("logs/losses/policy_loss", pg_loss.item(), global_step)
+                self.writer.add_scalar("logs/losses/entropy", entropy_loss.item(), global_step)
+                self.writer.add_scalar("logs/losses/old_approx_kl", old_approx_kl.item(), global_step)
+                self.writer.add_scalar("logs/losses/approx_kl", approx_kl.item(), global_step)
+                self.writer.add_scalar("logs/losses/clipfrac", np.mean(clipfracs), global_step)
+                self.writer.add_scalar("logs/losses/explained_variance", explained_var, global_step)
+                self.writer.add_scalar("logs/charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+                #'''
+
             if update % (self.args.cmd_log + 1) == 0:
                 # Save model weights
                 self.save(f'./eval/weights/{self.run_name}.pth')
