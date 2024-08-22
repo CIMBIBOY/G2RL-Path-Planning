@@ -76,7 +76,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         print(f"From start position: {agent_path[0]}, agent reached it's goal at: {agent_goal} in {time_idx} timesteps, for path length: {path_len}")
         done = True
         info['goal_reached'] = True
-        inst_arr[h_new, w_new] = [0, 255, 0]  # mark goal cell as green
+        inst_arr[h_new, w_new] = [128, 0, 128]  # mark goal cell as purple
         arrived = True
         agent_reward += rewards_dict('3', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]))
         terminations[0] += 1
