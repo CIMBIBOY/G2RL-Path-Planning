@@ -59,7 +59,7 @@ class WarehouseEnvironment:
         # Array for dynamic objects
         self.dynamic_coords = []
         self.stays = []
-        self.terminations = np.zeros(4)
+        self.terminations = np.zeros(4, dtype=int)
         self.last_action = 4
 
         # Agent reached end position count 
@@ -152,7 +152,7 @@ class WarehouseEnvironment:
         if self.amr_count > self.fast_obj_idx:
             for idx, path in enumerate(self.dynamic_coords[self.fast_obj_idx:]):
                 # Randomly decide whether to keep every second or every third coordinate
-                if self.np_random.random() < 0.9:  
+                if self.np_random.random() < 0.8:  
                     # 90% chance to remove every second or third coordinate
                     if self.np_random.random() < 0.5:
                         # 50% chance to remove every second coordinate

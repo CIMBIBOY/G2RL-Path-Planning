@@ -139,25 +139,33 @@ class CNNLSTM(nn.Module):
             print(f"Hidden shape: {hidden.shape}")
         logits = self.actor(hidden)
         if self.debug:
-            # print("Logits Matrix Before Masking:")
-            # print(logits)
+            print("Logits Matrix Before Masking:")
+            print(logits)
             print(f"logits shape: {logits.shape}")
 
         # Multiply logits by the mask
         masked_logits = logits * masks
-
         if self.debug:
-            print(f"masked logits shape: {masked_logits.shape}")
+            print("Logits Matrix After Masking:")
+            print(masked_logits)
+            print(f"logits shape: {masked_logits.shape}")
 
-        # Shift logits to avoid large negative values (optional)
-        masked_logits = masked_logits - torch.max(masked_logits, dim=-1, keepdim=True)[0]
+        if masked_logits.sum() > 0:
+            # Normaize logits to make total value sum up to 1
+            norm_logits = masked_logits / masked_logits.sum(dim=-1, keepdim=True)
+            if self.debug:
+                print("Logits Matrix After Normalization:")
+                print(norm_logits)
+                print(f"logits shape: {masked_logits.shape}")
+        else:
+            # Upon full zero values use exponential
+            norm_logits= torch.exp(masked_logits)
 
-        # Apply softmax to get the probability distribution
-        log_probs = F.log_softmax(masked_logits, dim=-1)
-        probs_distribution= torch.exp(log_probs)
+        # Clip values
+        clipped_logits = torch.clamp(norm_logits, min=1e-8, max=1.0)
 
         # Use these probabilities to create the categorical distribution
-        probs = Categorical(probs=probs_distribution)
+        probs = Categorical(probs=clipped_logits)
 
         if action is None:
             action = probs.sample()

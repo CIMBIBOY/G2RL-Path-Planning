@@ -212,13 +212,20 @@ class PPOAgent(nn.Module):
 
                 # print(f"PPO action tensor: {action.cpu().numpy()}")
                 next_obs, reward, done, trunc, info = self.env.step(action.cpu().numpy())
+                
+                # Debugging collisions
+                mean_terminations_oc = np.zeros(4)
+                for i in range(self.args.num_envs):
+                    mean_terminations_oc[i] = self.env.envs[i].terminations[3]
+                print(f"Collisions with obstacles in:\nEnv 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
+
                 termination_flags = np.logical_or(done, trunc)
                 # print(f"Termination flags: {termination_flags}")
                 steps += 1
                 
                 if self.args.pygame:
                     # Render the first environment instance 
-                    self.env.envs[0].render()
+                    self.env.envs[2].render()
 
                 batch_rewards.append(reward)
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
@@ -271,7 +278,7 @@ class PPOAgent(nn.Module):
             mean_terminations_rg = np.zeros(1)
             mean_terminations_gi = np.zeros(1)
             mean_terminations_ms = np.zeros(1)
-            mean_terminations_oc = np.zeros(1)
+            mean_terminations_oc = np.zeros(4)
 
             curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(4))
 
@@ -279,7 +286,7 @@ class PPOAgent(nn.Module):
                 mean_terminations_rg += self.env.envs[i].terminations[0]
                 mean_terminations_gi += self.env.envs[i].terminations[1]
                 mean_terminations_ms += self.env.envs[i].terminations[2]
-                mean_terminations_oc += self.env.envs[i].terminations[3]
+                mean_terminations_oc[i] = self.env.envs[i].terminations[3]
 
             # Log to wandb
             if self.args.track:
@@ -296,7 +303,7 @@ class PPOAgent(nn.Module):
                     "Reached goals": int(mean_terminations_rg),  # Count of episodes where the agent successfully reached the goal
                     "Lost guidance information": int(mean_terminations_gi),  # Count of episodes terminated due to loss of guidance
                     "Max steps reached": int(mean_terminations_ms),  # Count of episodes terminated due to reaching maximum steps
-                    "Collisions with obstacles": int(mean_terminations_oc),  # Count of episodes terminated due to collisions
+                    "Collisions with obstacles": int(mean_terminations_oc.sum()),  # Count of episodes terminated due to collisions
                     "Current max dynamic objects": curr_amr_count,  # Current number of dynamic objects, indicating environment complexity
                     "Global Steps": global_step,  # Total number of steps taken across all environments
                     "SPS": int(global_step / (time.time() - start_time)),  # Steps Per Second, reiterating the training speed
@@ -311,8 +318,9 @@ class PPOAgent(nn.Module):
                     print(f"Value Loss: {v_loss:.4f}")
                     print(f"Entropy: {entropy_loss:.4f}")
                     print(f"KL Divergence: {approx_kl:.4f}")
-                    print(f"Steps taken in {update} update: {steps}")
-                    print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}, Collisions with obstacles: {int(mean_terminations_oc)}\n")
+                    print(f"Steps taken in {update} update: {steps}") ,  
+                    print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}\n")
+                    print(f"Collisions with obstacles in:\nEnv 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
                     print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
                     print(f"SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
                     print(f" ---------------------------------------------------- ")
@@ -330,7 +338,8 @@ class PPOAgent(nn.Module):
                 print(f"KL Divergence: {approx_kl:.4f}")
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
                 print(f"Steps taken in {update} update: {steps}")
-                print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}, Collisions with obstacles: {int(mean_terminations_oc)}\n")
+                print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}\n")
+                print(f"Collisions with obstacles in:\nEnv 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
                 print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
                 print(f"SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
                 print(f" ---------------------------------------------------- ")
