@@ -14,6 +14,8 @@ from eval.eval import evaluate_performance
 import gym
 
 '''
+python3 main.py --train_name test --seed 420 --method mppo --train scratch --total_timesteps 20480000 --num_steps 2048 --cmd_log 5 --num_envs 4 --track --target_kl 0.01
+
 python3 main.py --train_name titan --cuda --seed 420 --method mppo --train scratch --total_timesteps 20480000 --num_steps 1024 --cmd_log 5 --learning_rate 3e-5 --num_envs 4 --track
 
 python3 main.py --train_name czm1 --seed 31 --method mppo --train retrain --model_weights eval/weights/czm1_mppo_31_1724005169.pth --total_timesteps 1280 --num_steps 128 --cmd_log 5 --learning_rate 3e-5 
@@ -71,7 +73,7 @@ if __name__ == '__main__':
         # Setting long horizon for ppo
         for i in range(args.num_envs):
             envs.envs[i].horizon = 'long'
-            envs.envs[i].max_step = args.batch_size * 4
+            envs.envs[i].max_step = args.batch_size
 
         # Render the first env instance
         if args.pygame:

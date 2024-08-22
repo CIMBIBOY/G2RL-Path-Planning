@@ -291,9 +291,12 @@ class WarehouseEnvironment:
         }
         return list(self.action_dict.keys())
     
+    def action_mask(self, device):
+        return self.get_action_mask(device)
+    
     def get_action_mask(self, device):
         """Return a mask of valid actions, where 1 indicates a valid action and 0 indicates an invalid action."""
-        mask = np.ones(len(self.action_dict), dtype=np.float32)
+        mask = torch.ones(len(self.action_dict), dtype=torch.float32, device=device)
 
         # Get the current position of the agent
         agent_position = self.agent_prev_coord
@@ -319,7 +322,7 @@ class WarehouseEnvironment:
             mask[4] = 1
 
         # print(f"Action mask: {mask}")
-        return torch.tensor(mask, device=device)
+        return mask
 
     def is_position_valid(self, h, w):
     
@@ -337,7 +340,6 @@ class WarehouseEnvironment:
         
         # print(f"Position ({h}, {w}) is valid")
         return True
-    
     
     def generate_end_points_and_paths(self):
         """

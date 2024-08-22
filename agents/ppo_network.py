@@ -39,7 +39,7 @@ def ppo_training(env, args, train_name, writer, wandb):
     print(f"Final Value Loss: {v_loss:.4f}")
     print(f"Final Entropy: {entropy_loss:.4f}")
     print(f"Final KL Divergence: {approx_kl:.4f}")
-    torch.save(agent.state_dict(), f'./weights/{train_name}.pth')
+    agent.save(f'./eval/weights/{train_name}.pth')
 
     print(" ---------- Training Finished ----------")
 

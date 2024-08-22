@@ -25,7 +25,7 @@ def parse_args():
         help="the number of environments running in parallel")
     parser.add_argument("--time_dim", type=int, default=4,
         help="the number of time dimensions used by the convolutional layers")
-    parser.add_argument("--learning_rate", type=float, default=2.5e-4,
+    parser.add_argument("--learning_rate", type=float, default=3.5e-5,
         help="the learning rate of the optimizer")
     parser.add_argument("--total_timesteps", type=int, default=128000,
         help="total timesteps of the experiments")

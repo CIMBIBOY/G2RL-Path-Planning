@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
 import numpy as np
 
@@ -122,7 +123,7 @@ class CNNLSTM(nn.Module):
         if envs_num > 1:
             masks = []
             for i in range(x.shape[1]):  # Iterate over each environment
-                mask = env.envs[i].get_action_mask(device)  # Get the action mask for each environment
+                mask = env.envs[i].action_mask(device = device)  # Get the action mask for each environment
                 masks.append(mask)
 
             # Stack the masks into a single tensor
@@ -131,7 +132,7 @@ class CNNLSTM(nn.Module):
                 print("Action Mask Matrix:")
                 print(masks)
                 print(f"Mask shape: {mask.shape}")
-        else: masks = env.get_action_mask(device)
+        else: masks = env.action_mask(device)
 
         hidden, lstm_state = self.get_states(x, lstm_state, done)
         if self.debug:
@@ -142,19 +143,30 @@ class CNNLSTM(nn.Module):
             # print(logits)
             print(f"logits shape: {logits.shape}")
 
-        # Action masking: Apply masks to logits
-        action_logits = logits + (1.0 - masks) * (-1e9)  # Penalize invalid actions with a large negative value
-        if self.debug:
-            # print("Logits Matrix After Masking:")
-            # print(action_logits)
-            print(f"action logits shape: {action_logits.shape}")
+        # Multiply logits by the mask
+        masked_logits = logits * masks
 
-        probs = Categorical(logits=action_logits)
+        if self.debug:
+            print(f"masked logits shape: {masked_logits.shape}")
+
+        # Shift logits to avoid large negative values (optional)
+        masked_logits = masked_logits - torch.max(masked_logits, dim=-1, keepdim=True)[0]
+
+        # Apply softmax to get the probability distribution
+        log_probs = F.log_softmax(masked_logits, dim=-1)
+        probs_distribution= torch.exp(log_probs)
+
+        # Use these probabilities to create the categorical distribution
+        probs = Categorical(probs=probs_distribution)
+
         if action is None:
             action = probs.sample()
             if self.debug:
                 print("Actions selected")
                 print(action)
                 print(f"actions shape: {action.shape}")
+
+        log_prob = probs.log_prob(action)
+        # log_prob = torch.log(probs.probs + 1e-8)[torch.arange(probs.probs.shape[0]), action]
         
-        return action, probs.log_prob(action), probs.entropy(), self.critic(hidden), lstm_state
+        return action, log_prob, probs.entropy(), self.critic(hidden), lstm_state

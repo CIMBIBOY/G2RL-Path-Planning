@@ -60,7 +60,17 @@ class PPOAgent(nn.Module):
                     self.args.num_envs
                 )
                 logratio = newlogprob - logprobs[mb_inds]
+                # print(f"Logratio befor clamp: {logratio}")
+                # logratio = torch.clamp(newlogprob - logprobs[mb_inds], -20, 20)
+                # print(f"Logratio after clamp: {logratio}")
                 ratio = logratio.exp()
+
+                # Check for NaN or Inf values
+                if torch.isnan(ratio).any() or torch.isinf(ratio).any():
+                    print("Warning: NaN or Inf detected in ratio")
+                    print(f"ratio: {ratio}")
+                    print(f"newlogprob: {newlogprob}")
+                    print(f"logprobs: {logprobs[mb_inds]}")
 
                 with torch.no_grad():
                     # calculate approx_kl http://joschu.net/blog/kl-approx.html
@@ -77,6 +87,14 @@ class PPOAgent(nn.Module):
                 pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - self.args.clip_coef, 1 + self.args.clip_coef)
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
+                # Logging intermediate values
+                print(f"Epoch {epoch}, Batch {start//envsperbatch}")
+                print(f"ratio mean: {ratio.mean().item():.4f}, min: {ratio.min().item():.4f}, max: {ratio.max().item():.4f}")
+                print(f"logratio mean: {logratio.mean().item():.4f}, min: {logratio.min().item():.4f}, max: {logratio.max().item():.4f}")
+                print(f"mb_advantages mean: {mb_advantages.mean().item():.4f}, std: {mb_advantages.std().item():.4f}")
+                print(f"pg_loss1 mean: {pg_loss1.mean().item():.4f}, pg_loss2 mean: {pg_loss2.mean().item():.4f}")
+                print(f"pg_loss: {pg_loss.item():.4f}")
+
                 # Value loss
                 newvalue = newvalue.view(-1)
                 if self.args.clip_vloss:
@@ -92,17 +110,51 @@ class PPOAgent(nn.Module):
                 else:
                     v_loss = 0.5 * ((newvalue - returns[mb_inds]) ** 2).mean()
 
+                # Logging value loss details
+                print(f"v_loss: {v_loss.item():.4f}")
+                print(f"newvalue mean: {newvalue.mean().item():.4f}, min: {newvalue.min().item():.4f}, max: {newvalue.max().item():.4f}")
+                print(f"returns mean: {returns[mb_inds].mean().item():.4f}, min: {returns[mb_inds].min().item():.4f}, max: {returns[mb_inds].max().item():.4f}")
+
                 entropy_loss = entropy.mean()
                 loss = pg_loss - self.args.ent_coef * entropy_loss + v_loss * self.args.vf_coef
 
+                # Logging total loss and its components
+                print(f"entropy_loss: {entropy_loss.item():.4f}")
+                print(f"total loss: {loss.item():.4f}")
+
                 self.optimizer.zero_grad()
                 loss.backward()
-                nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+
+                # Check for exploding gradients
+                total_norm = 0
+                for p in self.model.parameters():
+                    if p.grad is not None:
+                        param_norm = p.grad.data.norm(2)
+                        total_norm += param_norm.item() ** 2
+                total_norm = total_norm ** 0.5
+                print(f"gradient norm before clipping: {total_norm:.4f}")
+
+                total_norm = nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+                
+                # Check gradients after clipping
+                total_norm_after = 0
+                for p in self.model.parameters():
+                    if p.grad is not None:
+                        param_norm = p.grad.data.norm(2)
+                        total_norm_after += param_norm.item() ** 2
+                total_norm_after = total_norm_after ** 0.5
+                print(f"gradient norm after clipping: {total_norm_after:.4f}")
+
                 self.optimizer.step()
 
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:
+                    print(f"Gradient norm ({total_norm:.2f}) exceeded threshold. Clipping to {self.args.max_grad_norm}")
                     break
+
+         # Final logging for this update
+        print(f"Final approx_kl: {approx_kl:.4f}")
+        print(f"Final clipfracs: {np.mean(clipfracs):.4f}")
         
         y_pred, y_true = values.cpu().numpy(), returns.cpu().numpy()
         var_y = np.var(y_true)
@@ -264,6 +316,22 @@ class PPOAgent(nn.Module):
                     "SPS": int(global_step / (time.time() - start_time)),  # Steps Per Second, reiterating the training speed
                 })
 
+            if self.args.target_kl is not None:
+                if approx_kl > self.args.target_kl:
+                    print(f"Early stopping upon to high Kullback-Leibler (KL) divergence value: {approx_kl}, target treshold: {self.args.target_kl}")
+                    print(f" -------------------- Update: {update} -------------------- ")
+                    print(f"Reward: {np.mean(batch_rewards):.4f}")
+                    print(f"Policy Loss: {pg_loss:.4f}")
+                    print(f"Value Loss: {v_loss:.4f}")
+                    print(f"Entropy: {entropy_loss:.4f}")
+                    print(f"KL Divergence: {approx_kl:.4f}")
+                    print(f"Steps taken in {update} update: {steps}")
+                    print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}, Collisions with obstacles: {int(mean_terminations_oc)}\n")
+                    print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
+                    print(f"SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
+                    print(f" ---------------------------------------------------- ")
+                    break
+
             # Update information
             if update % self.args.cmd_log == 0:
                 end_time = time.time()
@@ -297,13 +365,9 @@ class PPOAgent(nn.Module):
                 self.writer.add_scalar("logs/charts/SPS", int(global_step / (time.time() - start_time)), global_step)
                 #'''
 
-            if update % (self.args.cmd_log + 1) == 0:
+            if update % (self.args.cmd_log * 10) == 0:
                 # Save model weights
                 self.save(f'./eval/weights/{self.run_name}.pth')
-
-            if self.args.target_kl is not None:
-                if approx_kl > self.args.target_kl:
-                    break
 
         return pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl
     

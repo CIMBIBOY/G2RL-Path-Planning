@@ -148,7 +148,7 @@ def print_model_summary_ppo(model, input_size, envs, device):
     # Print the correct input shape at the top
     print("----------------------------------------------------------------")
     print(f'------------- Input shape: {input_size} -------------')
-    print(" batch_size, num_envs, time_dim, obs_width, obs_height, channels")
+    print("batch_size, num_envs, time_dim, obs_width, obs_height, channels)")
     print("----------------------------------------------------------------")
     line_new = "{:>20}  {:>25} {:>15}".format("Layer (type)", "Output Shape", "Param #")
     print(line_new)
