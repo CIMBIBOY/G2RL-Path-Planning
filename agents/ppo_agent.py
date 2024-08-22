@@ -87,6 +87,7 @@ class PPOAgent(nn.Module):
                 pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - self.args.clip_coef, 1 + self.args.clip_coef)
                 pg_loss = torch.max(pg_loss1, pg_loss2).mean()
 
+                '''
                 # Logging intermediate values
                 print(f"Epoch {epoch}, Batch {start//envsperbatch}")
                 print(f"ratio mean: {ratio.mean().item():.4f}, min: {ratio.min().item():.4f}, max: {ratio.max().item():.4f}")
@@ -94,6 +95,7 @@ class PPOAgent(nn.Module):
                 print(f"mb_advantages mean: {mb_advantages.mean().item():.4f}, std: {mb_advantages.std().item():.4f}")
                 print(f"pg_loss1 mean: {pg_loss1.mean().item():.4f}, pg_loss2 mean: {pg_loss2.mean().item():.4f}")
                 print(f"pg_loss: {pg_loss.item():.4f}")
+                '''
 
                 # Value loss
                 newvalue = newvalue.view(-1)
@@ -110,41 +112,25 @@ class PPOAgent(nn.Module):
                 else:
                     v_loss = 0.5 * ((newvalue - returns[mb_inds]) ** 2).mean()
 
+                '''
                 # Logging value loss details
                 print(f"v_loss: {v_loss.item():.4f}")
                 print(f"newvalue mean: {newvalue.mean().item():.4f}, min: {newvalue.min().item():.4f}, max: {newvalue.max().item():.4f}")
                 print(f"returns mean: {returns[mb_inds].mean().item():.4f}, min: {returns[mb_inds].min().item():.4f}, max: {returns[mb_inds].max().item():.4f}")
+                '''
 
                 entropy_loss = entropy.mean()
                 loss = pg_loss - self.args.ent_coef * entropy_loss + v_loss * self.args.vf_coef
 
+                '''
                 # Logging total loss and its components
                 print(f"entropy_loss: {entropy_loss.item():.4f}")
                 print(f"total loss: {loss.item():.4f}")
+                '''
 
                 self.optimizer.zero_grad()
                 loss.backward()
-
-                # Check for exploding gradients
-                total_norm = 0
-                for p in self.model.parameters():
-                    if p.grad is not None:
-                        param_norm = p.grad.data.norm(2)
-                        total_norm += param_norm.item() ** 2
-                total_norm = total_norm ** 0.5
-                print(f"gradient norm before clipping: {total_norm:.4f}")
-
                 total_norm = nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
-                
-                # Check gradients after clipping
-                total_norm_after = 0
-                for p in self.model.parameters():
-                    if p.grad is not None:
-                        param_norm = p.grad.data.norm(2)
-                        total_norm_after += param_norm.item() ** 2
-                total_norm_after = total_norm_after ** 0.5
-                print(f"gradient norm after clipping: {total_norm_after:.4f}")
-
                 self.optimizer.step()
 
             if self.args.target_kl is not None:
@@ -152,9 +138,9 @@ class PPOAgent(nn.Module):
                     print(f"Gradient norm ({total_norm:.2f}) exceeded threshold. Clipping to {self.args.max_grad_norm}")
                     break
 
-         # Final logging for this update
-        print(f"Final approx_kl: {approx_kl:.4f}")
-        print(f"Final clipfracs: {np.mean(clipfracs):.4f}")
+        # Final logging for this update
+        # print(f"Final approx_kl: {approx_kl:.4f}")
+        # print(f"Final clipfracs: {np.mean(clipfracs):.4f}")
         
         y_pred, y_true = values.cpu().numpy(), returns.cpu().numpy()
         var_y = np.var(y_true)
