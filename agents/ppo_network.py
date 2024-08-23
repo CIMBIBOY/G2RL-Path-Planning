@@ -28,7 +28,7 @@ def ppo_training(env, args, train_name, writer, wandb):
     input_size = (args.batch_size, args.num_envs, args.time_dim, 30, 30, 4)  # (num_envs, batch_size, time_dim, height, width, channels)
 
     # Call the print_model_summary_ppo function once before starting the training
-    print_model_summary_ppo(model, input_size, env, device)
+    print_model_summary_ppo(model, input_size, device)
 
     print(f"\nTotal number of training updates: {int(args.total_timesteps // args.batch_size)}")
     print(" ----------------- Training Started -----------------")
@@ -45,7 +45,7 @@ def ppo_training(env, args, train_name, writer, wandb):
 
     # Final evaluation
     print(" ---------- Final Evaluation ----------")
-    final_performance = evaluate_performance(env.envs[0], args, num_episodes=100, agent = agent)
+    final_performance = evaluate_performance(env.envs[0], args, num_episodes=100, train_name= train_name, agent = agent)
     print(f"Final average reward: {final_performance['avg_reward']:.2f}")
     print(f"Final average moving cost: {final_performance['moving_cost']:.4f}")
     print(f"Final average detour percentage: {final_performance['detour_percentage']:.2f}%")

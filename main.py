@@ -14,7 +14,7 @@ from eval.eval import evaluate_performance
 import gym
 
 '''
-python3 main.py --train_name test --seed 420 --method mppo --train scratch --total_timesteps 20480000 --num_steps 2048 --cmd_log 5 --num_envs 4 --track --target_kl 0.01
+python3 main.py --train_name action_mask_fix --seed 500 --method mppo --train scratch --total_timesteps 20480000 --num_steps 2048 --cmd_log 5 --num_envs 4 --track --target_kl 0.01
 
 python3 main.py --train_name titan --cuda --seed 421 --method mppo --train scratch --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 3e-5 --num_envs 4 --track
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
         # Render the first env instance
         if args.pygame:
-            envs.envs[2].render() 
+            envs.envs[1].render() 
 
     elif args.eval or args.method != 'mppo': 
         if args.eval: args.seed += 1

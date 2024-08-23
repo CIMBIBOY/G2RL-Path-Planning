@@ -49,7 +49,7 @@ def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode
     plt.savefig(os.path.join(eval_folder, f'episode_{episode + 1}_eval.png'))
     plt.close()
 
-def evaluate_performance(env, args, num_episodes=100, agent = None, eval_folder="eval/eval_images", ):
+def evaluate_performance(env, args, num_episodes=100, agent = None, train_name = 'czm', eval_folder="eval/eval_images", ):
     """
     Evaluates the performance of the agent in the WarehouseEnvironment.
 
@@ -69,8 +69,8 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, eval_folder=
         agent = PPOAgent(env, model, args, "eval_test")
 
     try:
-        agent.load_model_only(args.model_weights)
-        print(f"Loaded model weights from: {args.model_weights}")
+        agent.load_model_only(f"eval/weights/{train_name}.pth")
+        print(f"Loaded model weights from: eval/weights/{train_name}")
         time.sleep(2)
     except Exception as e:
         print(f"Error loading model weights: {e}")
@@ -85,7 +85,7 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, eval_folder=
     total_reward = 0
 
     for episode in range(num_episodes):
-        _, state = env.reset()
+        state, info = env.reset()
         start_cell = env.dynamic_coords[env.agent_idx][0]
         end_cell = env.dynamic_coords[env.agent_idx][-1]
 

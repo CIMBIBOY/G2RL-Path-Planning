@@ -125,6 +125,22 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
+class CategoricalMasked(Categorical):
+    def __init__(self, probs=None, logits=None, validate_args=None, masks=[]):
+        self.masks = masks
+        if len(self.masks) == 0:
+            super(CategoricalMasked, self).__init__(probs, logits, validate_args)
+        else:
+            self.masks = masks.type(torch.BoolTensor).to(device)
+            logits = torch.where(self.masks, logits, torch.tensor(-1e8).to(device))
+            super(CategoricalMasked, self).__init__(probs, logits, validate_args)
+
+    def entropy(self):
+        if len(self.masks) == 0:
+            return super(CategoricalMasked, self).entropy()
+        p_log_p = self.logits * self.probs
+        p_log_p = torch.where(self.masks, p_log_p, torch.tensor(0.0).to(device))
+        return -p_log_p.sum(-1)
 
 class Agent(nn.Module):
     def __init__(self, envs):
@@ -179,13 +195,13 @@ class Agent(nn.Module):
         hidden, _ = self.get_states(x, lstm_state, done)
         return self.critic(hidden)
 
-    def get_action_and_value(self, x, lstm_state, done, action=None):
+    def get_action_and_value(self, x, lstm_state, done, masks, action=None):
         # print(f"Input shape: x tensor: {x.shape}, done shape: {done}")
         hidden, lstm_state = self.get_states(x, lstm_state, done)
         # print(f"Hidden shape: {hidden.shape}")
         logits = self.actor(hidden)
         # print(f"logits shape: {logits.shape}")
-        probs = Categorical(logits=logits)
+        probs = CategoricalMasked(logits=logits, mask=masks)
         if action is None:
             action = probs.sample()
             # print(f"actions shape: {action.shape}")
@@ -237,6 +253,7 @@ if __name__ == "__main__":
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
     values = torch.zeros((args.num_steps, args.num_envs)).to(device)
+    action_masks = torch.zeros((args.num_steps, args.num_envs) + (envs.single_action_space.nvec.sum(),)).to(device)
 
     print(f"actions shape: {actions.shape}")
     print(f"obs shape: {obs.shape}")
@@ -269,10 +286,11 @@ if __name__ == "__main__":
             global_step += 1 * args.num_envs
             obs[step] = next_obs
             dones[step] = next_done
+            action_masks[step] = torch.Tensor(np.array([env.action_mask for env in envs.envs]))
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value, next_lstm_state = agent.get_action_and_value(next_obs, next_lstm_state, next_done)
+                action, logprob, _, value, next_lstm_state = agent.get_action_and_value(next_obs, next_lstm_state, next_done, action_masks[step])
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -332,6 +350,7 @@ if __name__ == "__main__":
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
+        b_action_masks = action_masks.reshape((-1, action_masks.shape[-1]))
 
         # Print the shapes
         print(f"b_obs shape: {b_obs.shape}")
@@ -359,6 +378,7 @@ if __name__ == "__main__":
                     b_obs[mb_inds],
                     (initial_lstm_state[0][:, mbenvinds], initial_lstm_state[1][:, mbenvinds]),
                     b_dones[mb_inds],
+                    b_action_masks[mb_inds],
                     b_actions.long()[mb_inds],
                 )
                 logratio = newlogprob - b_logprobs[mb_inds]

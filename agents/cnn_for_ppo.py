@@ -1,8 +1,36 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.distributions.categorical import Categorical
 import numpy as np
+from typing import Optional
+
+class CategoricalMasked(Categorical):
+    def __init__(self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None):
+        self.mask = mask
+        self.batch, self.nb_action = logits.size()
+        if mask is None:
+            super(CategoricalMasked, self).__init__(logits=logits)
+        else:
+            self.mask_value = torch.tensor(
+                torch.finfo(logits.dtype).min, dtype=logits.dtype
+            )
+            # Apply mask (where mask is 0, replace logits with a large negative value)
+            logits = torch.where(mask.bool(), logits, self.mask_value)
+            super(CategoricalMasked, self).__init__(logits=logits)
+
+    def entropy(self):
+        if self.mask is None:
+            return super().entropy()
+        # Elementwise multiplication
+        p_log_p = self.logits * self.probs
+        # Compute the entropy with possible actions only
+        p_log_p = torch.where(
+            self.mask.bool(),
+            p_log_p,
+            torch.tensor(0, dtype=p_log_p.dtype, device=p_log_p.device),
+        )
+        # Sum over the action dimension
+        return -p_log_p.sum(dim=-1)
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -116,56 +144,26 @@ class CNNLSTM(nn.Module):
         hidden, _ = self.get_states(x, lstm_state, done)
         return self.critic(hidden)
 
-    def get_action_and_value(self, x, lstm_state, done, env, device, action=None, envs_num = 4):
+    def get_action_and_value(self, x, lstm_state, done, masks, action=None):
         # Get action masks for all environments
         if self.debug:
             print(f"Input shape: x tensor: {x.shape}, done shape: {done.shape}")
-        if envs_num > 1:
-            masks = []
-            for i in range(x.shape[1]):  # Iterate over each environment
-                mask = env.envs[i].action_mask(device = device)  # Get the action mask for each environment
-                masks.append(mask)
-
-            # Stack the masks into a single tensor
-            masks = torch.stack(masks)  # Shape: (num_envs, num_actions)
-            if self.debug:
-                print("Action Mask Matrix:")
-                print(masks)
-                print(f"Mask shape: {mask.shape}")
-        else: masks = env.action_mask(device)
+            print("Action Mask Matrix:")
+            print(masks)
+            print(f"Mask shape: {masks.shape}")
 
         hidden, lstm_state = self.get_states(x, lstm_state, done)
         if self.debug:
             print(f"Hidden shape: {hidden.shape}")
         logits = self.actor(hidden)
+        #
         if self.debug:
             print("Logits Matrix Before Masking:")
             print(logits)
             print(f"logits shape: {logits.shape}")
 
-        # Multiply logits by the mask
-        masked_logits = logits * masks
-        if self.debug:
-            print("Logits Matrix After Masking:")
-            print(masked_logits)
-            print(f"logits shape: {masked_logits.shape}")
-
-        if masked_logits.sum() > 0:
-            # Normaize logits to make total value sum up to 1
-            norm_logits = masked_logits / masked_logits.sum(dim=-1, keepdim=True)
-            if self.debug:
-                print("Logits Matrix After Normalization:")
-                print(norm_logits)
-                print(f"logits shape: {masked_logits.shape}")
-        else:
-            # Upon full zero values use exponential
-            norm_logits= torch.exp(masked_logits)
-
-        # Clip values
-        clipped_logits = torch.clamp(norm_logits, min=1e-8, max=1.0)
-
-        # Use these probabilities to create the categorical distribution
-        probs = Categorical(probs=clipped_logits)
+        # Use the CategoricalMasked distribution with the mask applied to logits
+        probs = CategoricalMasked(logits=logits, mask=masks)    
 
         if action is None:
             action = probs.sample()

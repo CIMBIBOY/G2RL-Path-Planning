@@ -87,7 +87,7 @@ def print_model_summary_dqn(model, input_size, batch_size):
     print(f'Non-trainable params: {total_params - trainable_params}')
     print('-------------------------------------------------------')
 
-def print_model_summary_ppo(model, input_size, envs, device):
+def print_model_summary_ppo(model, input_size, device):
     def register_hook(module):
         def hook(module, input, output):
             class_name = str(module.__class__).split(".")[-1].split("'")[0]
@@ -137,9 +137,10 @@ def print_model_summary_ppo(model, input_size, envs, device):
         torch.zeros(model.lstm.num_layers, input_size[1], model.lstm.hidden_size).to(device)
     )
     done = torch.zeros(input_size[1]).to(device)
+    mask = torch.zeros((input_size[0], input_size[1], 5)).to(device)
     
     with torch.no_grad():
-        model.get_action_and_value(x, lstm_state, done, envs, device, envs_num=input_size[1])
+        model.get_action_and_value(x, lstm_state, done, mask)
 
     # Remove the hooks
     for h in hooks:

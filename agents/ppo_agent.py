@@ -36,7 +36,7 @@ class PPOAgent(nn.Module):
         print(checkpoint.keys())
         self.load_state_dict(checkpoint['model_state_dict'])
     
-    def update(self, obs, actions, logprobs, advantages, returns, values, init_lstm, dones):
+    def update(self, obs, actions, masks, logprobs, advantages, returns, values, init_lstm, dones):
         # Optimizing the policy and value network
         assert self.args.num_envs % self.args.num_minibatches == 0
         envsperbatch = self.args.num_envs // self.args.num_minibatches
@@ -54,10 +54,8 @@ class PPOAgent(nn.Module):
                     obs[mb_inds],
                     (init_lstm[0][:, mbenvinds], init_lstm[1][:, mbenvinds]),
                     dones[mb_inds],
-                    self.env,
-                    self.device,
-                    actions.long()[mb_inds],
-                    self.args.num_envs
+                    masks[mb_inds],
+                    actions.long()[mb_inds]
                 )
                 logratio = newlogprob - logprobs[mb_inds]
                 # print(f"Logratio befor clamp: {logratio}")
@@ -117,7 +115,7 @@ class PPOAgent(nn.Module):
                 print(f"v_loss: {v_loss.item():.4f}")
                 print(f"newvalue mean: {newvalue.mean().item():.4f}, min: {newvalue.min().item():.4f}, max: {newvalue.max().item():.4f}")
                 print(f"returns mean: {returns[mb_inds].mean().item():.4f}, min: {returns[mb_inds].min().item():.4f}, max: {returns[mb_inds].max().item():.4f}")
-                '''
+                #'''
 
                 entropy_loss = entropy.mean()
                 loss = pg_loss - self.args.ent_coef * entropy_loss + v_loss * self.args.vf_coef
@@ -126,7 +124,7 @@ class PPOAgent(nn.Module):
                 # Logging total loss and its components
                 print(f"entropy_loss: {entropy_loss.item():.4f}")
                 print(f"total loss: {loss.item():.4f}")
-                '''
+                #'''
 
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -153,11 +151,12 @@ class PPOAgent(nn.Module):
         
         # Initialize tensors
         obs = torch.zeros((self.args.num_steps, self.args.num_envs) + self.env.observation_space.shape[-4:]).to(self.device)
-        actions = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
+        actions = torch.zeros((self.args.num_steps, self.args.num_envs) + self.env.single_action_space.shape).to(self.device)
         logprobs = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         rewards = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         dones = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         values = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
+        action_masks = torch.zeros((self.args.num_steps, self.args.num_envs) + (5,)).to(self.device)
          
         global_step = 0
         start_time = time.time()
@@ -177,6 +176,7 @@ class PPOAgent(nn.Module):
         print(f"rewards shape: {rewards.shape}")
         print(f"dones shape: {dones.shape}")
         print(f"values shape: {values.shape}")  
+        print(f"action_masks shape: {action_masks.shape}")  
 
         print(f"next_obs shape: {next_obs.shape}")
         print(f"next_done shape: {next_done.shape}")
@@ -198,14 +198,13 @@ class PPOAgent(nn.Module):
                 global_step += 1 * self.args.num_envs
                 obs[step] = next_obs
                 dones[step] = next_done
+                mask = torch.stack([env.action_mask(self.device) for env in self.env.envs])
+                action_masks[step] = mask
 
                 with torch.no_grad():
                     action, logprob, entropy, value, next_lstm_state = self.model.get_action_and_value(
-                        next_obs, next_lstm_state, next_done, self.env, self.device, envs_num = self.args.num_envs
+                        next_obs, next_lstm_state, next_done, action_masks[step]
                     )
-                    # print(action[0])
-                    # print(logprob.shape)
-                    # print(value.shape)
                     values[step] = value.flatten()
                 actions[step] = action
                 logprobs[step] = logprob
@@ -213,11 +212,13 @@ class PPOAgent(nn.Module):
                 # print(f"PPO action tensor: {action.cpu().numpy()}")
                 next_obs, reward, done, trunc, info = self.env.step(action.cpu().numpy())
                 
+                '''
                 # Debugging collisions
                 mean_terminations_oc = np.zeros(4)
                 for i in range(self.args.num_envs):
                     mean_terminations_oc[i] = self.env.envs[i].terminations[3]
-                print(f"Collisions with obstacles in:\nEnv 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
+                print(f"Collisions with obstacles in: - Env 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
+                #'''
 
                 termination_flags = np.logical_or(done, trunc)
                 # print(f"Termination flags: {termination_flags}")
@@ -225,7 +226,7 @@ class PPOAgent(nn.Module):
                 
                 if self.args.pygame:
                     # Render the first environment instance 
-                    self.env.envs[2].render()
+                    self.env.envs[1].render()
 
                 batch_rewards.append(reward)
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
@@ -264,15 +265,16 @@ class PPOAgent(nn.Module):
             # flatten the batch
             b_obs = obs.reshape((-1,) + self.env.observation_space.shape[-4:]).unsqueeze(1)
             b_logprobs = logprobs.reshape(-1)
-            b_actions = actions.reshape((-1,))
+            b_actions = actions.reshape((-1,) + self.env.single_action_space.shape)
             b_advantages = advantages.reshape(-1)
             b_returns = returns.reshape(-1)
             b_values = values.reshape(-1)
             b_dones = dones.reshape(-1)
+            b_action_masks = action_masks.reshape((-1, action_masks.shape[-1]))
 
             # Optimizing the policy and value network
             pg_loss, v_loss, entropy_loss, old_approx_kl, approx_kl, clipfracs, explained_var = self.update(
-                b_obs, b_actions, b_logprobs, b_advantages, b_returns, b_values, initial_lstm_state, b_dones
+                b_obs, b_actions, b_action_masks, b_logprobs, b_advantages, b_returns, b_values, initial_lstm_state, b_dones
             )
 
             mean_terminations_rg = np.zeros(1)
