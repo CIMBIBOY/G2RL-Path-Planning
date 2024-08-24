@@ -39,7 +39,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, cells_skipped, dist, agent_goal, terminations, stayed_array, info, fast_obj_from, path_len):
+def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, leave_idx, dist, agent_goal, terminations, stayed_array, info, fast_obj_from, path_len):
     
     """ 
     Update coordinates
@@ -77,8 +77,9 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         done = True
         info['goal_reached'] = True
         inst_arr[h_new, w_new] = [128, 0, 128]  # mark goal cell as purple
-        arrived = True
-        agent_reward += rewards_dict('3', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]))
+        agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx)
+        if time_idx < path_len * 2:
+            arrived = True
         terminations[0] += 1
 
     # Check for out of bounds or collisions with obstacles
@@ -101,16 +102,29 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
             if global_map[h_new, w_new] == 255:
                 agent_reward += rewards_dict('0')
                 # print("Reward for non global navigation")
-                cells_skipped += 1
+                # Calculate the number of non-255 cells in global_map
 
-            if global_map[h_new, w_new] != 255 and cells_skipped == 0:
-                agent_reward += rewards_dict('4')
+                # Find the index of the leave posiiton in the global path
+                if global_map[h_old, w_old] != 255 or leave_idx == -1:
+                    leave_idx = agent_path.index([h_old, w_old])
+
+            if global_map[h_new, w_new] != 255 and leave_idx == -1:
+                agent_reward += rewards_dict('3')
                 # print("Reward for staying on the global path")
             
-            if global_map[h_new, w_new] != 255 and cells_skipped > 0:
+            if global_map[h_new, w_new] != 255 and leave_idx >= 0:
+                # Find the index of the current position in the global path
+                return_index = agent_path.index(list((h_new, w_new)))
+                cells_skipped = return_index - leave_idx
+
                 agent_reward += rewards_dict('2', cells_skipped)
                 # print("Reward for retruning to global path")
-                cells_skipped = 0
+                leave_idx = -1
+                
+                # Optional: Update the global_map to reflect the new global path
+                for x, y in agent_path[:return_index]:
+                    global_map[x, y] = 255  # or another value indicating it's no longer on the path
+
 
     # Calculate new distance
     new_dist = manhattan_distance(h_new, w_new, agent_path[-1][0], agent_path[-1][1])
@@ -172,10 +186,10 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     global_map[h_old, w_old] = 255
     local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
 
-    return np.array(local_obs), np.array(local_map), global_map, done, trunc, info, agent_reward, cells_skipped, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
+    return np.array(local_obs), np.array(local_map), global_map, done, trunc, info, agent_reward, leave_idx, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
 
 
-def rewards_dict(case, N = 0, path_len = 0):
+def rewards_dict(case, N = 0, time_idx = 1):
 
     """
     Return reward value
@@ -185,7 +199,7 @@ def rewards_dict(case, N = 0, path_len = 0):
     r4 agent reaches it's goal
     r5 agent follows it's global guidance path
     """
-    r1,r2,r3,r4,r5= -0.01, -0.1, 0.1, 0.1 * path_len/10, 0.16
+    r1,r2,r3,r4,r5= -0.01, -0.1, 0.1,  0.16, N/time_idx,
     rewards = {
         '0': r1,
         '1': r1 + r2,

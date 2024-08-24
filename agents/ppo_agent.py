@@ -38,8 +38,10 @@ class PPOAgent(nn.Module):
     
     def update(self, obs, actions, masks, logprobs, advantages, returns, values, init_lstm, dones):
         # Optimizing the policy and value network
-        assert self.args.num_envs % self.args.num_minibatches == 0
-        envsperbatch = self.args.num_envs // self.args.num_minibatches
+        if self.args.num_envs == 1: envsperbatch = 1
+        else: 
+            assert self.args.num_envs % self.args.num_minibatches == 0
+            envsperbatch = self.args.num_envs // self.args.num_minibatches
         envinds = np.arange(self.args.num_envs)
         flatinds = np.arange(self.args.batch_size).reshape(self.args.num_steps, self.args.num_envs)
         clipfracs = []
@@ -221,18 +223,22 @@ class PPOAgent(nn.Module):
                 #'''
 
                 termination_flags = np.logical_or(done, trunc)
+                # if termination_flags:
+                    # print(f"Info: {info}")
                 # print(f"Termination flags: {termination_flags}")
                 steps += 1
                 
                 if self.args.pygame:
                     # Render the first environment instance 
-                    self.env.envs[1].render()
+                    self.env.envs[0].render()
 
                 batch_rewards.append(reward)
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
                 next_obs = torch.Tensor(next_obs).permute(1, 0, 2, 3, 4, 5).to(self.device)
                 # Convert the result to a tensor
                 next_done = torch.Tensor(termination_flags).to(self.device)
+
+
 
             # bootstrap value if not done
             with torch.no_grad():
@@ -282,7 +288,7 @@ class PPOAgent(nn.Module):
             mean_terminations_ms = np.zeros(1)
             mean_terminations_oc = np.zeros(4)
 
-            curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(4))
+            curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(self.args.num_envs))
 
             for i in range(self.args.num_envs):
                 mean_terminations_rg += self.env.envs[i].terminations[0]
@@ -294,6 +300,7 @@ class PPOAgent(nn.Module):
             if self.args.track:
                 self.wandb.log({
                     "learning_rate": self.optimizer.param_groups[0]["lr"],  # Current learning rate used by the optimizer
+                    "batch_mean_reward": np.mean(batch_rewards), # Mean comulative reward of the current batch
                     "value_loss": v_loss,  # Loss related to how well the agent predicts the value of states
                     "policy_loss": pg_loss,  # Loss related to how well the agent learns to choose actions
                     "entropy_loss": entropy_loss,  # Entropy of the policy, indicating the randomness of action selection

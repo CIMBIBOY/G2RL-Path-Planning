@@ -173,7 +173,7 @@ class WarehouseEnvironment:
 
         self.time_idx = 0
         self.scenes = []
-        self.cells_skipped = 0
+        self.leave_idx = -1
         
         # initialization state
         reset_state = self.dynamic_coords[self.agent_idx]
@@ -212,11 +212,11 @@ class WarehouseEnvironment:
 
         # Update coordinates 
         local_obs, local_map, self.global_mapper_arr, done, trunc, self.info, rewards, \
-        self.cells_skipped, self.init_arr, new_agent_coord, self.dist, reached_goal, self.terminations, self.stays = \
+        self.leave_idx, self.init_arr, new_agent_coord, self.dist, reached_goal, self.terminations, self.stays = \
         update_coords(
             self.dynamic_coords, self.init_arr, self.agent_idx, self.time_idx,
             self.local_fov, self.global_mapper_arr, [x,y], self.agent_prev_coord,
-            self.cells_skipped, self.dist, self.agent_goal, self.terminations, self.stays, self.info, self.fast_obj_idx, self.agent_path_len
+            self.leave_idx, self.dist, self.agent_goal, self.terminations, self.stays, self.info, self.fast_obj_idx, self.agent_path_len
         )
 
         self.steps += 1
@@ -421,6 +421,13 @@ class WarehouseEnvironment:
         
         # Blit the scaled surface to the screen
         self.screen.blit(surf, (0, 0))
+
+        # Display the global guidance map as a semi-transparent overlay
+        if hasattr(self, 'global_mapper_arr'):
+            guidance_surf = pygame.surfarray.make_surface(self.global_mapper_arr)
+            guidance_surf = pygame.transform.scale(guidance_surf, (new_width, new_height))
+            guidance_surf.set_alpha(128)  # Set transparency level
+            self.screen.blit(guidance_surf, (0, 0))
 
         # Update the display
         pygame.display.flip()

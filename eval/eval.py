@@ -67,14 +67,23 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
     if agent == None:
         model = CNNLSTM().to(device)
         agent = PPOAgent(env, model, args, "eval_test")
-
-    try:
-        agent.load_model_only(f"eval/weights/{train_name}.pth")
-        print(f"Loaded model weights from: eval/weights/{train_name}")
-        time.sleep(2)
-    except Exception as e:
-        print(f"Error loading model weights: {e}")
-        time.sleep(2)
+    
+    if args.eval:
+        try:
+            agent.load_model_only(f"{args.model_weigths}.pth")
+            print(f"Loaded model weights from: {args.model_weigths}")
+            time.sleep(2)
+        except Exception as e:
+            print(f"Error loading model weights: {e}")
+            time.sleep(2)  
+    else: 
+        try:
+            agent.load_model_only(f"eval/weights/{train_name}.pth")
+            print(f"Loaded model weights from: eval/weights/{train_name}")
+            time.sleep(2)
+        except Exception as e:
+            print(f"Error loading model weights: {e}")
+            time.sleep(2)
 
     os.makedirs(eval_folder, exist_ok=True)
 
@@ -104,7 +113,7 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
             optimal_path_length = len(optimal_path_coords)
             print(f"Optimal path length: {optimal_path_length}")
 
-        done = np.zeros(1)
+        done = np.zeros(args.num_envs)
         steps = 0
         path = []
         episode_reward = 0
