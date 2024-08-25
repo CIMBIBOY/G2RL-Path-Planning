@@ -16,9 +16,9 @@ import gym
 import warnings
 
 '''
-python3 main.py --train_name develop --seed 510 --method mppo --train scratch --total_timesteps 20480000 --num_steps 512 --cmd_log 5 --num_envs 5 
+python3 main.py --train_name CS47 --seed 515 --method mppo --train scratch --total_timesteps 10240000 --num_steps 512 --cmd_log 5 --num_envs 4 --time_dim 7 --track
 
-python3 main.py --train_name TS6 --cuda --seed 455 --method mppo --train scratch --total_timesteps 20480000 --num_steps 1024 --cmd_log 5 --learning_rate 4e-5 --num_envs 5 --track
+python3 main.py --train_name TS6 --cuda --seed 455 --method mppo --train scratch --total_timesteps 20480000 --num_steps 1024 --cmd_log 5 --learning_rate 4e-5 --num_envs 5 
 
 python3 main.py --train_name titanS --cuda --seed 437 --method mppo --train retrain --model_weights eval/weights/titan_mppo_432_1724522465.pth --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 1e-5 --num_envs 4 --track --clip_coef 0.1 --max_grad_norm 0.4
 

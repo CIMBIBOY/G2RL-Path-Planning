@@ -73,7 +73,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     # Check if the agent has reached its goal
     if (h_new, w_new) == (agent_goal[0], agent_goal[1]):
         print(f"")
-        print(f"From start position: {agent_path[0]}, agent reached it's goal at: {agent_goal} in {time_idx} timesteps, for path length: {path_len}")
+        print(f"From start position: {agent_path[0]}, agent reached it's goal at: {agent_goal} in {time_idx} timesteps, for path length: {path_len}\n")
         done = True
         info['goal_reached'] = True
         inst_arr[h_new, w_new] = [128, 0, 128]  # mark goal cell as purple
@@ -131,6 +131,12 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     if new_dist < dist:
         dist = new_dist
 
+    # Update agent position before moving obstacles
+    if not done:
+        # Clear the previous agent position
+        inst_arr[h_old, w_old] = [255, 255, 255]
+        inst_arr[h_new, w_new] = [255, 0, 0]
+
     # At reset state objects don't move
     if time_idx != 1: 
         # Update dynamic obstacles
@@ -175,12 +181,6 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
                 else: 
                     inst_arr[h_new_obs, w_new_obs] = [255, 165, 0]  # Move to new position
 
-    # Update agent position after moving obstacles
-    if not done:
-        # Clear the previous agent position
-        inst_arr[h_old, w_old] = [255, 255, 255]
-        inst_arr[h_new, w_new] = [255, 0, 0]
-
     # Update local observation and global map
     local_obs = inst_arr[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
     global_map[h_old, w_old] = 255
@@ -199,7 +199,7 @@ def rewards_dict(case, N = 0, time_idx = 1):
     r4 agent reaches it's goal
     r5 agent follows it's global guidance path
     """
-    r1,r2,r3,r4,r5= -0.01, -0.1, 0.1, 0.16, N/time_idx,
+    r1,r2,r3,r4,r5= -0.01, -0.1, 0.08, 0.1, N/time_idx,
     rewards = {
         '0': r1,
         '1': r1 + r2,

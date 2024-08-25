@@ -42,7 +42,7 @@ class ConvBlock(nn.Module):
         super(ConvBlock, self).__init__()
         self.conv1 = layer_init(nn.Conv3d(in_channels, out_channels, kernel_size=(int(time_dimension/2), 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)))
         self.bn1 = nn.BatchNorm3d(out_channels)
-        self.conv2 = layer_init(nn.Conv3d(out_channels, out_channels, kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
+        self.conv2 = layer_init(nn.Conv3d(out_channels, out_channels, kernel_size=(int(time_dimension/4), 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
         self.bn2 = nn.BatchNorm3d(out_channels)
         self.dropout = nn.Dropout3d(dropout_rate)
 
