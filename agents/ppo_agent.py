@@ -239,11 +239,18 @@ class PPOAgent(nn.Module):
                 # Convert the result to a tensor
                 next_done = torch.Tensor(termination_flags).to(self.device)
 
-                if termination_flags:
+                if termination_flags.any():
+                    # Find the indices of environments that terminated
+                    terminated_envs = [i for i, flag in enumerate(termination_flags) if flag]
+                    # Find the indices and the arrive number of the environment with the maximum arrivals
                     max_arrived, max_arrived_i = max((self.env.envs[i].arrived, i) for i in range(self.args.num_envs))
-                    print(f" -------------------- Episode: {episodes}, Start-goal pair episode: {np.ceil(episodes/50)} -------------------- ")
-                    print(f" Episode_mean_reward: {np.mean(batch_rewards)}, episode_step_length: {steps}")
-                    print(f" Current_max_arrival: {max_arrived}, in environment: {max_arrived_i}")
+                    print(f" -------------------- Episode: {episodes}, Start-goal pair episode: {int(np.ceil(episodes/50))} -------------------- ")
+                    # Print the reason for terminated environment
+                    for i in terminated_envs:
+                        reset_reasons = [key for key, value in self.env.envs[i].info.items() if value is True]
+                        print(f" Environment {[i]} reset due to: {', '.join(reset_reasons) if reset_reasons else 'Unknown'}")
+                    print(f" Episode mean reward: {np.mean(batch_rewards):.4f}, episode step length: {steps}")
+                    print(f" Current max arrival: {max_arrived}, in environment: {max_arrived_i}")
                     print(" ---------------------------------------------------------------------------------------------------- ")
                     if self.args.track:
                         self.wandb.log({ 
@@ -300,7 +307,7 @@ class PPOAgent(nn.Module):
             mean_terminations_rg = np.zeros(1)
             mean_terminations_gi = np.zeros(1)
             mean_terminations_ms = np.zeros(1)
-            mean_terminations_oc = np.zeros(4)
+            mean_terminations_oc = np.zeros(self.args.num_envs)
 
             curr_amr_count, curr_index = max((self.env.envs[i].amr_count, i) for i in range(self.args.num_envs))
 
