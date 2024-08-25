@@ -242,6 +242,8 @@ class WarehouseEnvironment:
             self.info['R_max_step'] = True
             self.terminations[2] += 1
 
+        if done or trunc: self.agent_last_coord = new_agent_coord
+
         combined_arr = np.array([])
         if len(local_obs) > 0:
             self.scenes.append(Image.fromarray(local_obs, 'RGB'))

@@ -22,21 +22,25 @@ def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode
         eval_folder (str): The folder where evaluation images will be saved.
     """
     plt.figure(figsize=(10, 10))
+
+    # Transpose init_arr to match the expected shape for imshow
+    init_arr = np.transpose(init_arr, (1, 0, 2))
+
     plt.imshow(init_arr, cmap='binary')
 
     # Plot start and end positions
-    plt.plot(start[1], start[0], 'ro', markersize=10, label='Start')
-    plt.plot(end[1], end[0], 'go', markersize=10, label='End')
+    plt.plot(start[0], start[1], 'ro', markersize=10, label='Start')
+    plt.plot(end[0], end[1], 'go', markersize=10, label='End')
 
     # Plot agent's path
     if agent_path:
         agent_path = np.array(agent_path)
-        plt.plot(agent_path[:, 1], agent_path[:, 0], 'gray', linestyle=':', linewidth=2, label="Agent's Path")
+        plt.plot(agent_path[:, 0], agent_path[:, 1], 'gray', linestyle=':', linewidth=3, label="Agent's Path")
 
     # Plot optimal path
     if a_star_path:
         a_star_path = np.array(a_star_path)
-        plt.plot(a_star_path[:, 1], a_star_path[:, 0], 'blue', linestyle=':', linewidth=2, label='Optimal Path')
+        plt.plot(a_star_path[:, 0], a_star_path[:, 1], 'blue', linestyle='-', linewidth=2, label='Optimal Path')
 
     plt.title(f'Episode {episode + 1} Evaluation')
     plt.legend()
@@ -49,7 +53,7 @@ def save_evaluation_image(init_arr, start, end, agent_path, a_star_path, episode
     plt.savefig(os.path.join(eval_folder, f'episode_{episode + 1}_eval.png'))
     plt.close()
 
-def evaluate_performance(env, args, num_episodes=100, agent = None, train_name = 'czm', eval_folder="eval/eval_images", ):
+def evaluate_performance(env, args, num_episodes=100, agent = None, train_name = 'czm', eval_folder="eval/eval_images", wandb=None):
     """
     Evaluates the performance of the agent in the WarehouseEnvironment.
 
@@ -65,25 +69,17 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     if agent == None:
-        model = CNNLSTM().to(device)
-        agent = PPOAgent(env, model, args, "eval_test")
+        model = CNNLSTM(time_dim = args.time_dim).to(device)
+        agent = PPOAgent(env, model, args, train_name, writer=None, wandb=wandb)
     
     if args.eval:
         try:
-            agent.load_model_only(f"{args.model_weigths}.pth")
-            print(f"Loaded model weights from: {args.model_weigths}")
+            agent.load_model_only(f"{args.model_weights}")
+            print(f"Loaded model weights from: {args.model_weights}")
             time.sleep(2)
         except Exception as e:
             print(f"Error loading model weights: {e}")
-            time.sleep(2)  
-    else: 
-        try:
-            agent.load_model_only(f"eval/weights/{train_name}.pth")
-            print(f"Loaded model weights from: eval/weights/{train_name}")
-            time.sleep(2)
-        except Exception as e:
-            print(f"Error loading model weights: {e}")
-            time.sleep(2)
+            return 0 
 
     os.makedirs(eval_folder, exist_ok=True)
 
@@ -95,13 +91,14 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
 
     for episode in range(num_episodes):
         state, info = env.reset()
-        start_cell = env.dynamic_coords[env.agent_idx][0]
-        end_cell = env.dynamic_coords[env.agent_idx][-1]
+        next_obs = torch.Tensor(state).permute(1, 0, 2, 3, 4, 5).to(device)
+        start_cell = env.envs[0].dynamic_coords[env.envs[0].agent_idx][0]
+        end_cell = env.envs[0].dynamic_coords[env.envs[0].agent_idx][-1]
 
         assert start_cell != end_cell, "Start and end cells are the same"
         print(f" ---------- Episode {episode + 1}/{num_episodes} ---------- ")
         
-        value_map = map_to_value(env.init_arr.squeeze())
+        value_map = map_to_value(env.envs[0].init_arr.squeeze())
         optimal_path, _ = find_path(value_map, start_cell, end_cell)
       
         if optimal_path == 'fail':
@@ -113,7 +110,7 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
             optimal_path_length = len(optimal_path_coords)
             print(f"Optimal path length: {optimal_path_length}")
 
-        done = np.zeros(args.num_envs)
+        termination_flags = False
         steps = 0
         path = []
         episode_reward = 0
@@ -121,34 +118,44 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
 
         # Initialize LSTM state
         lstm_state = agent.init_lstm_states(1)
+        next_done = torch.zeros(1).to(device)
         
-        while not done:
-            state_tensor = torch.FloatTensor(state).to(agent.device)
+        while not termination_flags:
             with torch.no_grad():
                 action, _, _, _, lstm_state = agent.model.get_action_and_value(
-                    state_tensor, lstm_state, torch.zeros(1).to(agent.device), env, agent.device
+                    next_obs, lstm_state, next_done, env.envs[0].action_mask(device)
                 )
             
-            action = action.cpu().numpy().item()
-            next_state, reward, done, trunc, info = env.step(action)
+            next_obs, reward, done, trunc, info = env.step(action.cpu().numpy())
+
+            # Render the env
+            if args.pygame:
+                env.envs[0].render()  
+
+            termination_flags = np.logical_or(done, trunc)
+            next_done = torch.Tensor(termination_flags).to(device)
+            next_obs = torch.Tensor(next_obs).permute(1, 0, 2, 3, 4, 5).to(device)
             
-            cell = env.agent_prev_coord
-            state = next_state
+            if not termination_flags:
+                cell = env.envs[0].agent_prev_coord
+            else: cell = env.envs[0].agent_last_coord
+
+            path.append(cell)
             steps += 1
             episode_reward += reward
+            
 
-            cell = env.agent_prev_coord
-            path.append(cell)
-
-            if done or trunc:
+            '''
+            if termination_flags:
                 print("\nInfo:")
                 for key, value in info.items():
                     print(f"  {key}: {value}")
+                    '''
 
         end_time = time.time()
         computing_time = (end_time - start_time) / steps
 
-        manhattan_distance = abs(cell[0] - start_cell[0]) + abs(cell[1] - start_cell[1])
+        manhattan_distance = np.absolute(int(cell[0]) - int(start_cell[0])) + np.absolute(int(cell[1]) - int(start_cell[1]))
         moving_cost = steps / (manhattan_distance + 1e-7) if manhattan_distance != 0 else 0
 
         if optimal_path_length > 0:
@@ -168,17 +175,17 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
         print(f"  Moving cost: {moving_cost:.4f}")
         print(f"  Detour percentage: {detour_percentage:.2f}%")
         print(f"  Computing time: {computing_time:.4f} s/step")
-        print(f"  Episode reward: {episode_reward:.2f}")
+        print(f"  Episode reward: {episode_reward}")
         print(f"  Failed paths so far: {failed_paths}")
-        print(f"  Reached goals for start-goal pair: {env.arrived}")
-        print(f"  Reached goals so far: {env.terminations[0]}")
-        print(f"  Terminations caused by reaching max steps: {env.terminations[2]}")
-        print(f"  Terminations caused by having no global guidance: {env.terminations[1]}")
-        print(f"  Terminations caused by collision with dynamic obstacles: {env.terminations[3]}")
+        print(f"  Reached goals for start-goal pair: {env.envs[0].arrived}")
+        print(f"  Reached goals so far: {env.envs[0].terminations[0]}")
+        print(f"  Terminations caused by reaching max steps: {env.envs[0].terminations[2]}")
+        print(f"  Terminations caused by having no global guidance: {env.envs[0].terminations[1]}")
+        print(f"  Terminations caused by collision with dynamic obstacles: {env.envs[0].terminations[3]}")
         print(f" ---------------------------------------\n")
 
         # Save the evaluation image
-        save_evaluation_image(env.init_arr, start_cell, end_cell, path, optimal_path_coords, episode, eval_folder)
+        save_evaluation_image(env.envs[0].init_arr, start_cell, end_cell, path, optimal_path_coords, episode, eval_folder)
 
     avg_reward = total_reward / num_episodes
     avg_moving_cost = total_moving_cost / num_episodes
@@ -186,15 +193,15 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
     avg_computing_time = total_computing_time / num_episodes
 
     print("\n ---------- Evaluation Results: ----------")
-    print(f"Average Reward: {avg_reward:.2f}")
+    print(f"Average Reward: {avg_reward}")
     print(f"Average Moving Cost: {avg_moving_cost:.4f}")
     print(f"Average Detour Percentage: {avg_detour_percentage:.2f}%")
     print(f"Average Computing Time: {avg_computing_time:.4f} s/step")
     print(f"Total Failed Paths: {failed_paths}")
-    print(f"Total Goals Reached: {env.terminations[0]:.0f}")
-    print(f"Terminations caused by reaching max steps so far: {env.terminations[2]:.0f}")
-    print(f"Terminations caused by having no global guidance so far: {env.terminations[1]:.0f}")
-    print(f"Terminations caused by collision with dynamic obstacles so far: {env.terminations[3]:.0f}")
+    print(f"Total Goals Reached: {env.envs[0].terminations[0]}")
+    print(f"Terminations caused by reaching max steps so far: {env.envs[0].terminations[2]}")
+    print(f"Terminations caused by having no global guidance so far: {env.envs[0].terminations[1]}")
+    print(f"Terminations caused by collision with dynamic obstacles so far: {env.envs[0].terminations[3]}")
     print(f" ---------------------------------------- ")
 
     return {
@@ -203,8 +210,8 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
         "detour_percentage": avg_detour_percentage,
         "computing_time": avg_computing_time,
         "failed_paths": failed_paths,
-        "agent_reached_goal": env.terminations[0],
-        "max_steps_reached": env.terminations[2],
-        "no_global_guidance": env.terminations[1],
-        "collisions_with_obstacles": env.terminations[3]
+        "agent_reached_goal": env.envs[0].terminations[0],
+        "max_steps_reached": env.envs[0].terminations[2],
+        "no_global_guidance": env.envs[0].terminations[1],
+        "collisions_with_obstacles": env.envs[0].terminations[3]
     }

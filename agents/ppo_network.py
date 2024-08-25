@@ -7,7 +7,8 @@ from agents.cnn_for_ppo import CNNLSTM
 from eval.eval import evaluate_performance
 import time
 from helpers.model_summary import print_model_summary_ppo
-from environment.WarehouseEnv import WarehouseEnvironment
+import gym
+from environment.vector_env import make_custom_env
 
 def ppo_training(env, args, train_name, writer, wandb):
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
@@ -45,7 +46,11 @@ def ppo_training(env, args, train_name, writer, wandb):
 
     # Final evaluation
     print(" ---------- Final Evaluation ----------")
-    final_performance = evaluate_performance(env.envs[0], args, num_episodes=100, train_name= train_name, agent = agent)
+    env = gym.vector.SyncVectorEnv(
+            [make_custom_env(seed=args.seed + 4, idx=i, height=48, width=48, amr_count=25, max_amr=25, time_dimension=args.time_dim, pygame_render=args.pygame) for i in range(1)]
+        )
+    
+    final_performance = evaluate_performance(env, args, num_episodes=100, train_name= train_name, agent = agent, wandb=wandb)
     print(f"Final average reward: {final_performance['avg_reward']:.2f}")
     print(f"Final average moving cost: {final_performance['moving_cost']:.4f}")
     print(f"Final average detour percentage: {final_performance['detour_percentage']:.2f}%")

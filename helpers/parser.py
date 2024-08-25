@@ -27,7 +27,7 @@ def parse_args():
         help="the number of time dimensions used by the convolutional layers")
     parser.add_argument("--learning_rate", type=float, default=3.5e-5,
         help="the learning rate of the optimizer")
-    parser.add_argument("--total_timesteps", type=int, default=128000,
+    parser.add_argument("--total_timesteps", type=int, default=10240000,
         help="total timesteps of the experiments")
     
     parser.add_argument("--torch_deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
@@ -50,7 +50,7 @@ def parse_args():
                 help='Set command line log frequency')
 
     # PPO algorithm specific arguments
-    parser.add_argument("--num_steps", type=int, default=128,
+    parser.add_argument("--num_steps", type=int, default=1024,
         help="the number of steps to run in each environment per policy rollout")
     parser.add_argument("--anneal_lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="Toggle learning rate annealing for policy and value networks")

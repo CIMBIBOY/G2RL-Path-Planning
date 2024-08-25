@@ -238,8 +238,6 @@ class PPOAgent(nn.Module):
                 # Convert the result to a tensor
                 next_done = torch.Tensor(termination_flags).to(self.device)
 
-
-
             # bootstrap value if not done
             with torch.no_grad():
                 next_value = self.model.get_value(next_obs, next_lstm_state, next_done).reshape(1, -1)
