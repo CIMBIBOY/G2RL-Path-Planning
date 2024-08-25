@@ -66,7 +66,7 @@ def parse_args():
         help="the K epochs to update the policy")
     parser.add_argument("--norm_adv", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="Toggles advantages normalization")
-    parser.add_argument("--clip_coef", type=float, default=0.2,
+    parser.add_argument("--clip_coef", type=float, default=0.1,
         help="the surrogate clipping coefficient")
     parser.add_argument("--clip_vloss", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
         help="Toggles whether or not to use a clipped loss for the value function, as per the paper.")
@@ -74,7 +74,7 @@ def parse_args():
         help="coefficient of the entropy")
     parser.add_argument("--vf_coef", type=float, default=0.5,
         help="coefficient of the value function")
-    parser.add_argument("--max_grad_norm", type=float, default=0.5,
+    parser.add_argument("--max_grad_norm", type=float, default=0.3,
         help="the maximum norm for the gradient clipping")
     parser.add_argument("--target_kl", type=float, default=None,
         help="the target KL divergence threshold")

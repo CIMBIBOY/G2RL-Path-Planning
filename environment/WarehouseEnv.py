@@ -116,7 +116,7 @@ class WarehouseEnvironment:
 
             self.seed(self.np_random.integers(0, 1000000))
             # Implementing curriculum learning
-            if self.arrived >= 10 and self.amr_count < self.max_amr: 
+            if self.arrived >= 25 and self.amr_count < self.max_amr: 
                 self.amr_count += 1
                 print(f"Dynamic object added, current count: {self.amr_count}")
                 if self.amr_count == self.fast_obj_idx:

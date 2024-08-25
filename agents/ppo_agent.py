@@ -187,6 +187,7 @@ class PPOAgent(nn.Module):
         
         start_time = time.time()
         steps = 0
+        episodes = 1
         batch_rewards = []
 
         for update in range(1, num_updates + 1):
@@ -237,6 +238,21 @@ class PPOAgent(nn.Module):
                 next_obs = torch.Tensor(next_obs).permute(1, 0, 2, 3, 4, 5).to(self.device)
                 # Convert the result to a tensor
                 next_done = torch.Tensor(termination_flags).to(self.device)
+
+                if termination_flags:
+                    max_arrived, max_arrived_i = max((self.env.envs[i].arrived, i) for i in range(self.args.num_envs))
+                    print(f" -------------------- Episode: {episodes}, Start-goal pair episode: {np.ceil(episodes/50)} -------------------- ")
+                    print(f" Episode_mean_reward: {np.mean(batch_rewards)}, episode_step_length: {steps}")
+                    print(f" Current_max_arrival: {max_arrived}, in environment: {max_arrived_i}")
+                    print(" ---------------------------------------------------------------------------------------------------- ")
+                    if self.args.track:
+                        self.wandb.log({ 
+                            "Episode_mean_reward": np.mean(batch_rewards), # Mean comulative reward of the current batch
+                            "Episode_step_length": steps,
+                            "Current_max_arrival": max_arrived
+                            })
+                    steps = 0
+                    batch_rewards = []
 
             # bootstrap value if not done
             with torch.no_grad():
@@ -298,7 +314,6 @@ class PPOAgent(nn.Module):
             if self.args.track:
                 self.wandb.log({
                     "learning_rate": self.optimizer.param_groups[0]["lr"],  # Current learning rate used by the optimizer
-                    "batch_mean_reward": np.mean(batch_rewards), # Mean comulative reward of the current batch
                     "value_loss": v_loss,  # Loss related to how well the agent predicts the value of states
                     "policy_loss": pg_loss,  # Loss related to how well the agent learns to choose actions
                     "entropy_loss": entropy_loss,  # Entropy of the policy, indicating the randomness of action selection
@@ -318,14 +333,13 @@ class PPOAgent(nn.Module):
 
             if self.args.target_kl is not None:
                 if approx_kl > self.args.target_kl:
+                    print(f" ---------------------------------------------------- ")
                     print(f"Early stopping upon to high Kullback-Leibler (KL) divergence value: {approx_kl}, target treshold: {self.args.target_kl}")
                     print(f" -------------------- Update: {update} -------------------- ")
-                    print(f"Reward: {np.mean(batch_rewards):.4f}")
                     print(f"Policy Loss: {pg_loss:.4f}")
                     print(f"Value Loss: {v_loss:.4f}")
                     print(f"Entropy: {entropy_loss:.4f}")
-                    print(f"KL Divergence: {approx_kl:.4f}")
-                    print(f"Steps taken in {update} update: {steps}") ,  
+                    print(f"KL Divergence: {approx_kl:.4f}") 
                     print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}\n")
                     print(f"Collisions with obstacles in:\nEnv 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
                     print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
@@ -338,21 +352,17 @@ class PPOAgent(nn.Module):
                 end_time = time.time()
                 computing_time = end_time - start_time
                 print(f" -------------------- Update: {update} -------------------- ")
-                print(f"Reward: {np.mean(batch_rewards):.4f}")
                 print(f"Policy Loss: {pg_loss:.4f}")
                 print(f"Value Loss: {v_loss:.4f}")
                 print(f"Entropy: {entropy_loss:.4f}")
                 print(f"KL Divergence: {approx_kl:.4f}")
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
-                print(f"Steps taken in {update} update: {steps}")
                 print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}\n")
                 print(f"Collisions with obstacles in:\nEnv 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
                 print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
                 print(f"SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
                 print(f" ---------------------------------------------------- ")
                 start_time = time.time()
-                steps = 0
-                batch_rewards = []
 
                 '''
                 # TRY NOT TO MODIFY: record rewards for plotting purposes

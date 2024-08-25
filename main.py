@@ -20,7 +20,7 @@ python3 main.py --train_name develop --seed 510 --method mppo --train scratch --
 
 python3 main.py --train_name titan --cuda --seed 432 --method mppo --train scratch --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 3e-5 --num_envs 4 --track
 
-python3 main.py --train_name titan --cuda --seed 437 --method mppo --train retrain --model_weights eval/weights/titan_mppo_432_1724522465.pth --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 1e-5 --target_kl 0.01 --num_envs 4 --track 
+python3 main.py --train_name titan --cuda --seed 437 --method mppo --train retrain --model_weights eval/weights/titan_mppo_432_1724522465.pth --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 1e-5 --num_envs 4 --track --clip_coef 0.1 --max_grad_norm 0.4
 
 python3 main.py --train_name czm1 --seed 37 --method dqn --train scratch --total_timesteps 100000 --num_steps 1000 --pygame --cmd_log 5 --batch 64 --explore 20000
 
