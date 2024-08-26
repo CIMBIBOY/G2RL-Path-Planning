@@ -11,8 +11,7 @@ from helpers.utils import debug_start, debug_end
 # DQN training script
 def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_images = False, device = "cpu", model_weights_path=None, batch_size = 32, train_name = 'train', cmd_log = 5, explore = 200000):
     # Initialize the agent with its network
-    agent = Agent(env, CNNLSTMActor(30,30,7,3).to(device), explore, device)
-    agent.batch_size = batch_size
+    agent = Agent(env, CNNLSTMActor(7).to(device), explore, device, batch_size=batch_size)
     N = 50
 
    # Load model weights if provided
@@ -38,6 +37,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
     bar_bool = False
     render = 0
     steps = 0
+    done = torch.zeros(batch_size)
 
     try:        
         for e in range(num_episodes):
@@ -59,9 +59,11 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
             
             for timestep in range(timesteps_per_episode):
                 # Compute action
-                action = agent.act(state)
+                action = agent.act(state, done)
                 # Step the environment
                 next_state, reward, done, trunc, info = env.step(action)
+
+                termination_flags = np.logical_or(done, trunc)
 
                 # Render the environment if it's enabled
                 if env.pygame_render:
@@ -73,7 +75,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
                 # Store if shape is valid for the CNN input
                 agent.store(state, action, reward, next_state, terminated)
                 
-                if done or trunc:
+                if termination_flags:
                     agent.align_target_model()
                     break
                 

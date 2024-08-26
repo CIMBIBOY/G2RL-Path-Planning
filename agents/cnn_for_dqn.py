@@ -2,40 +2,54 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-class CNNLSTMActor(nn.Module):
-    def __init__(self, height=15, width=15, nt=7, nc=3, dropout_rate=0.2):
-        super(CNNLSTMActor, self).__init__()
-        self.nc = nc
-        self.conv_blocks = nn.ModuleList()
-        
-        in_channels = 4
-        out_channels = 32
-        for _ in range(nc):
-            self.conv_blocks.append(nn.Sequential(
-                nn.Conv3d(in_channels, out_channels, kernel_size=(2, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)),
-                # nn.BatchNorm3d(out_channels),
-                nn.ReLU(),
-                # nn.Dropout3d(dropout_rate),
-                nn.Conv3d(out_channels, out_channels, kernel_size=(2, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
-                # nn.BatchNorm3d(out_channels),
-                nn.ReLU(),
-                # nn.Dropout3d(dropout_rate)
-            ))
-            in_channels = out_channels
-            out_channels *= 2
-        
-        self.lstm_input_size = 128 * 2 * 2 * 4
-        
-        self.lstm = nn.LSTM(input_size=self.lstm_input_size, hidden_size=512, batch_first=False)
-        
-        self.fc1 = nn.Linear(512, 512)
-        self.fc2 = nn.Linear(512, 5)  # Action logits output
-        
-        self.dropout = nn.Dropout(dropout_rate)
-        
-        self.apply(self.orthogonal_init)
+def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
 
-        self.debug = True
+class ConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, time_dimension = 7, dropout_rate=0.2):
+        super(ConvBlock, self).__init__()
+        self.conv1 = layer_init(nn.Conv3d(in_channels, out_channels, kernel_size=(int(time_dimension/3), 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)))
+        # self.bn1 = nn.BatchNorm3d(out_channels)
+        self.conv2 = layer_init(nn.Conv3d(out_channels, out_channels, kernel_size=(int(time_dimension/3), 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
+        # self.bn2 = nn.BatchNorm3d(out_channels)
+        # self.dropout = nn.Dropout3d(dropout_rate)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        # x = self.bn1(x)
+        x = torch.relu(x)
+        # x = self.dropout(x)
+        x = self.conv2(x)
+        # x = self.bn2(x)
+        x = torch.relu(x)
+        # x = self.dropout(x)
+        return x
+
+class CNNLSTMActor(nn.Module):
+    def __init__(self, time_dim = 7):
+        super(CNNLSTMActor, self).__init__()
+        self.conv_blocks = nn.Sequential(
+            ConvBlock(4, 32, time_dim),
+            ConvBlock(32, 64, time_dim),
+            ConvBlock(64, 128, time_dim),
+        )
+        
+        self.flatten = nn.Flatten()
+        
+        self.lstm = nn.LSTM(128 * 2 * 2 * 4, 512, batch_first=False)
+        for name, param in self.lstm.named_parameters():
+            if "bias" in name:
+                nn.init.constant_(param, 0)
+            elif "weight" in name:
+                nn.init.orthogonal_(param, 1.0)
+        
+        self.fc1 = layer_init(nn.Linear(512, 512))
+        # self.dropout = nn.Dropout(0.2)
+        self.fc2 = layer_init(nn.Linear(512, 5), std=0.01)
+        
+        self.debug = False
 
     def forward(self, x, lstm_state, done):
         # print(f"Input shape before processing: {x.shape}")
@@ -51,7 +65,6 @@ class CNNLSTMActor(nn.Module):
             print(f"Shape after conv block: {x.shape}")
         
         hidden = self.flatten(x)
-        batch_size = lstm_state[0].shape[1]
         if self.debug:
             print(f"Hidden shape after flatten: {hidden.shape}")
             print(f"Batch_size: {batch_size}")
@@ -65,6 +78,11 @@ class CNNLSTMActor(nn.Module):
         done = done.view(-1, batch_size)
         if self.debug:
             print(f"Done shape: {done.shape}")
+
+        if self.debug:
+            print(lstm_state[0].shape)
+            print(lstm_state[1].shape)
+            print((1.0 - done).view(1, -1, 1).shape)
         
          # Initialize a list to store the new hidden states  
         new_hidden = []
@@ -89,23 +107,5 @@ class CNNLSTMActor(nn.Module):
         
         action_logits = self.fc2(x)
         # print(f"Shape after second linear + relu: {x.shape}")
-        return action_logits
+        return action_logits, lstm_state
     
-    def orthogonal_init(self, module):
-        if isinstance(module, (nn.Conv3d, nn.Linear)):
-            nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
-            if module.bias is not None:
-                nn.init.constant_(module.bias, 0)
-        elif isinstance(module, nn.LSTM):
-            for name, param in module.named_parameters():
-                if 'weight' in name:
-                    nn.init.orthogonal_(param, gain=np.sqrt(2))
-                elif 'bias' in name:
-                    nn.init.constant_(param, 0)
-        elif isinstance(module, nn.BatchNorm3d):
-            nn.init.constant_(module.weight, 1)
-            nn.init.constant_(module.bias, 0)
-
-        # Recursively initialize submodules
-        for child in module.children():
-            self.orthogonal_init(child)

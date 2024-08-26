@@ -115,6 +115,10 @@ class CNNLSTM(nn.Module):
         if self.debug:
             print(f"Done shape: {done.shape}")  
 
+        if self.debug:
+            print(lstm_state[0].shape)
+            print(lstm_state[1].shape)
+            print((1.0 - done).view(1, -1, 1).shape)
         # Initialize a list to store the new hidden states  
         new_hidden = []
         for h, d in zip(hidden, done):

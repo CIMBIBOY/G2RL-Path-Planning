@@ -41,9 +41,15 @@ def print_model_summary_dqn(model, input_size, batch_size):
     # Get the device of the model
     device = next(model.parameters()).device
 
+    done = torch.zeros(input_size[0])
+    lstm_state = (
+        torch.zeros(model.lstm.num_layers, input_size[0], model.lstm.hidden_size).to(device),
+        torch.zeros(model.lstm.num_layers, input_size[0], model.lstm.hidden_size).to(device)
+    )
+
     model.apply(register_hook)
     # Move the input tensor to the same device as the model
-    model(torch.zeros(*input_size).to(device))
+    model(torch.zeros(*input_size).to(device), lstm_state, done)
 
     for h in hooks:
         h.remove()
