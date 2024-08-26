@@ -11,7 +11,7 @@ from helpers.utils import debug_start, debug_end
 # DQN training script
 def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_images = False, device = "cpu", model_weights_path=None, batch_size = 32, train_name = 'train', cmd_log = 5, explore = 200000):
     # Initialize the agent with its network
-    agent = Agent(env, CNNLSTMActor(30,30,4,3).to(device), explore, device)
+    agent = Agent(env, CNNLSTMActor(30,30,7,3).to(device), explore, device)
     agent.batch_size = batch_size
     N = 50
 
@@ -25,7 +25,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
             print(f"Error loading model weights: {e}")
             time.sleep(2)
     
-    print_model_summary_dqn(agent.q_network, (batch_size, 4, 30, 30, 4), batch_size)
+    print_model_summary_dqn(agent.q_network, (batch_size, 7, 30, 30, 4), batch_size)
 
     all_episode_rewards = []
     all_episode_losses = []
@@ -71,8 +71,7 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
                 render += 1
 
                 # Store if shape is valid for the CNN input
-                if state.shape != (1, 1, 30, 30, 4): 
-                    agent.store(state, action, reward, next_state, terminated)
+                agent.store(state, action, reward, next_state, terminated)
                 
                 if done or trunc:
                     agent.align_target_model()
@@ -138,6 +137,6 @@ def dqn_training(env, num_episodes=1144, timesteps_per_episode = 1000, save_imag
 
     finally:
         # Save the training metrics
-        np.save(f'./log/models/episode_rewards_{train_name}.npy', all_episode_rewards)
-        np.savez(f'./log/models/metrics_{train_name}.npz', rewards=all_episode_rewards, losses=all_episode_losses)
+        np.save(f'logs/models/episode_rewards_{train_name}.npy', all_episode_rewards)
+        np.savez(f'logs/models/metrics_{train_name}.npz', rewards=all_episode_rewards, losses=all_episode_losses)
         

@@ -16,13 +16,13 @@ import gym
 import warnings
 
 '''
-python3 main.py --train_name CS47 --seed 515 --method mppo --train scratch --total_timesteps 10240000 --num_steps 512 --cmd_log 5 --num_envs 4 --time_dim 7 --track
+python3 main.py --train_name CS47 --seed 515 --method mppo --train scratch --total_timesteps 10240000 --num_steps 256 --cmd_log 5 --num_envs 4 --time_dim 7 --learning_rate 2e-8
 
-python3 main.py --train_name TS6 --cuda --seed 455 --method mppo --train scratch --total_timesteps 20480000 --num_steps 1024 --cmd_log 5 --learning_rate 4e-5 --num_envs 5 
+python3 main.py --train_name TS47 --cuda --seed 520 --method mppo --train scratch --total_timesteps 20480000 --num_steps 1024 --cmd_log 5 --learning_rate 3e-5 --num_envs 4 --time_dim 7 --track
 
 python3 main.py --train_name titanS --cuda --seed 437 --method mppo --train retrain --model_weights eval/weights/titan_mppo_432_1724522465.pth --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 1e-5 --num_envs 4 --track --clip_coef 0.1 --max_grad_norm 0.4
 
-python3 main.py --train_name czm1 --seed 37 --method dqn --train scratch --total_timesteps 100000 --num_steps 1000 --pygame --cmd_log 5 --batch 64 --explore 20000
+python3 main.py --train_name Q7 --seed 37 --method dqn --train scratch --total_timesteps 100000 --num_steps 1000 --cmd_log 5 --batch 64 --explore 200000
 
 python3 main.py --train_name eval --seed 444 --method mppo --train retrain --model_weights eval/weights/titan_mppo_432_1724522465.pth --eval --eval_steps 100
 

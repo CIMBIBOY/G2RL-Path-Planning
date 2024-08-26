@@ -23,7 +23,7 @@ def parse_args():
     
     parser.add_argument("--num_envs", type=int, default=4,
         help="the number of environments running in parallel")
-    parser.add_argument("--time_dim", type=int, default=4,
+    parser.add_argument("--time_dim", type=int, default=7,
         help="the number of time dimensions used by the convolutional layers")
     parser.add_argument("--learning_rate", type=float, default=3.5e-5,
         help="the learning rate of the optimizer")
@@ -74,7 +74,7 @@ def parse_args():
         help="coefficient of the entropy")
     parser.add_argument("--vf_coef", type=float, default=0.5,
         help="coefficient of the value function")
-    parser.add_argument("--max_grad_norm", type=float, default=0.3,
+    parser.add_argument("--max_grad_norm", type=float, default=0.5,
         help="the maximum norm for the gradient clipping")
     parser.add_argument("--target_kl", type=float, default=None,
         help="the target KL divergence threshold")

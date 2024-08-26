@@ -38,23 +38,23 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, time_dimension, dropout_rate=0.2):
+    def __init__(self, in_channels, out_channels, time_dimension = 7, dropout_rate=0.2):
         super(ConvBlock, self).__init__()
-        self.conv1 = layer_init(nn.Conv3d(in_channels, out_channels, kernel_size=(int(time_dimension/2), 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)))
-        self.bn1 = nn.BatchNorm3d(out_channels)
-        self.conv2 = layer_init(nn.Conv3d(out_channels, out_channels, kernel_size=(int(time_dimension/4), 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
-        self.bn2 = nn.BatchNorm3d(out_channels)
-        self.dropout = nn.Dropout3d(dropout_rate)
+        self.conv1 = layer_init(nn.Conv3d(in_channels, out_channels, kernel_size=(int(time_dimension/3), 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)))
+        # self.bn1 = nn.BatchNorm3d(out_channels)
+        self.conv2 = layer_init(nn.Conv3d(out_channels, out_channels, kernel_size=(int(time_dimension/3), 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
+        # self.bn2 = nn.BatchNorm3d(out_channels)
+        # self.dropout = nn.Dropout3d(dropout_rate)
 
     def forward(self, x):
         x = self.conv1(x)
-        x = self.bn1(x)
+        # x = self.bn1(x)
         x = torch.relu(x)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         x = self.conv2(x)
-        x = self.bn2(x)
+        # x = self.bn2(x)
         x = torch.relu(x)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         return x
 
 class CNNLSTM(nn.Module):
@@ -76,11 +76,11 @@ class CNNLSTM(nn.Module):
                 nn.init.orthogonal_(param, 1.0)
         
         self.fc = layer_init(nn.Linear(512, 512))
-        self.dropout = nn.Dropout(0.2)
+        # self.dropout = nn.Dropout(0.2)
         self.actor = layer_init(nn.Linear(512, 5), std=0.01)
         self.critic = layer_init(nn.Linear(512, 1), std=1)
         
-        self.debug = False
+        self.debug = True
 
     def get_states(self, x, lstm_state, done):
         # Constructed get_states so it works with concatenated past observations (nt time dimension > 1) - leveraging observation_history 
@@ -88,7 +88,7 @@ class CNNLSTM(nn.Module):
 
         if self.debug:
             print(f"Debug get_states: x tensor shape: {x.shape}, done: {done.shape} ")
-        x = x.permute(0, 1, 2, 5, 3, 4).contiguous()
+        x = x.permute(0, 1, 5, 2, 3, 4).contiguous()
         if self.debug:
             print(f"x tensor shape after reshape: {x.shape}")
         x = x.view(-1, channels, nt, height, width)  # Flatten batch and num_envs into one dimension
@@ -116,7 +116,6 @@ class CNNLSTM(nn.Module):
             print(f"Done shape: {done.shape}")  
 
         # Initialize a list to store the new hidden states  
-        
         new_hidden = []
         for h, d in zip(hidden, done):
             # Process each timestep separately, taking care of done flags
@@ -135,7 +134,8 @@ class CNNLSTM(nn.Module):
 
         # Pass through fully connected layer and dropout
         final_hidden = self.fc(new_hidden)
-        final_hidden = self.dropout(final_hidden)
+        final_hidden = torch.relu(final_hidden)
+        # final_hidden = self.dropout(final_hidden)
         if self.debug:
             print(f"Final hidden shape: {final_hidden.shape}")
         return final_hidden, lstm_state

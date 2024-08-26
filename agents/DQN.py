@@ -31,7 +31,7 @@ class Agent:
 
         self.device = torch.device(device)
         self.q_network = model.to(self.device)
-        self.target_network = type(model)(30, 30, 4, 3).to(self.device)
+        self.target_network = type(model)(30, 30, 7, 3).to(self.device)
 
         self.target_network.load_state_dict(self.q_network.state_dict())  # Copy weights from q_network to target_network
         self.target_network.eval()  # Set target network to evaluation mode
@@ -57,7 +57,7 @@ class Agent:
 
     def _build_compile_model(self):
         # Build initialization network model
-        model = CNNLSTMActor(30,30,4,3)
+        model = CNNLSTMActor(30,30,7,3)
         return model
 
     def align_target_model(self):
@@ -80,7 +80,7 @@ class Agent:
                 break
 
         # take action
-        if np.random.rand() <= self.epsilon or state.shape != (1,4,30,30,4):
+        if np.random.rand() <= self.epsilon:
             action = random.choice(self._action_space)
             self.rand_act += 1
             # print(f"random action: {action}")
@@ -102,6 +102,9 @@ class Agent:
         rewards = torch.from_numpy(np.array(rewards)).float().to(self.device)
         dones = torch.from_numpy(np.array(dones)).bool().to(self.device)
         weights = torch.from_numpy(np.array(weights)).float().to(self.device)
+
+        print(actions.shape)
+        print(states.shape)
 
         states = states.squeeze(1)  # Remove the unnecessary dimension
         next_states = next_states.squeeze(1)
@@ -129,3 +132,9 @@ class Agent:
         self.expirience_replay.update_priorities(indices, errors)
 
         return loss.item()
+    
+    def init_lstm_states(self, num_envs=1):
+        return (
+            torch.zeros(self.model.lstm.num_layers, 1, self.model.lstm.hidden_size).to(self.device),
+            torch.zeros(self.model.lstm.num_layers, 1, self.model.lstm.hidden_size).to(self.device)
+        )
