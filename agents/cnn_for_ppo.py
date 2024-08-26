@@ -80,7 +80,7 @@ class CNNLSTM(nn.Module):
         self.actor = layer_init(nn.Linear(512, 5), std=0.01)
         self.critic = layer_init(nn.Linear(512, 1), std=1)
         
-        self.debug = True
+        self.debug = False
 
     def get_states(self, x, lstm_state, done):
         # Constructed get_states so it works with concatenated past observations (nt time dimension > 1) - leveraging observation_history 
