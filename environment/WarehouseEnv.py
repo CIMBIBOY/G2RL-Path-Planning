@@ -186,7 +186,7 @@ class WarehouseEnvironment:
         start = reset_state[0]
         end = reset_state[-1]
         self.dist = manhattan_distance(start[0], start[1], end[0], end[1])
-        self.agent_path_len = self.dist + 1
+        self.agent_path_len = self.dist
 
         self.agent_path = self.agents_paths[self.agent_idx]
         self.agent_goal = self.agent_path[-1]  # Get the goal from the agent's path

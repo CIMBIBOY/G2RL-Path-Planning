@@ -76,10 +76,10 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         print(f"From start position: {agent_path[0]}, agent reached it's goal at: {agent_goal} in {time_idx} timesteps, for path length: {path_len}\n")
         done = True
         info['goal_reached'] = True
-        inst_arr[h_new, w_new] = [128, 0, 128]  # mark goal cell as purple
-        agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx)
+        # inst_arr[h_new, w_new] = [128, 0, 128]  # mark goal cell as purple
         if time_idx < path_len * 2:
             arrived = True
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx)
         terminations[0] += 1
 
     # Check for out of bounds or collisions with obstacles
@@ -199,7 +199,7 @@ def rewards_dict(case, N = 0, time_idx = 1):
     r4 agent reaches it's goal
     r5 agent follows it's global guidance path
     """
-    r1,r2,r3,r4,r5= -0.01, -0.1, 0.08, 0.1, N/time_idx,
+    r1,r2,r3,r4,r5= -0.01, -0.1, 0.08, 0.1, N/(time_idx*2),
     rewards = {
         '0': r1,
         '1': r1 + r2,
