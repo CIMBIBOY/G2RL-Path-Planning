@@ -186,12 +186,12 @@ class PPOAgent(nn.Module):
         #'''
         
         start_time = time.time()
-        steps = 0
+        steps = np.zeros(4)
         episodes = 1
-        batch_rewards = []
 
         for update in range(1, num_updates + 1):
             initial_lstm_state = (next_lstm_state[0].clone(), next_lstm_state[1].clone())
+            batch_rewards = []
             if self.args.anneal_lr:
                 frac = 1.0 - (update - 1.0) / num_updates
                 lrnow = frac * self.args.learning_rate
@@ -249,17 +249,15 @@ class PPOAgent(nn.Module):
                     for i in terminated_envs:
                         reset_reasons = [key for key, value in self.env.envs[i].info.items() if value is True]
                         print(f" Environment {[i]} reset due to: {', '.join(reset_reasons) if reset_reasons else 'Unknown'}")
-                    print(f" Episode mean reward: {np.mean(batch_rewards):.4f}, episode step length: {steps}")
+                    print(f" Current episode step lengths: {steps} for environments")
                     print(f" Current max arrival: {max_arrived}, in environment: {max_arrived_i}")
                     print(" ---------------------------------------------------------------------------------------------------- ")
                     if self.args.track:
                         self.wandb.log({ 
-                            "Episode_mean_reward": np.mean(batch_rewards), # Mean comulative reward of the current batch
                             "Episode_step_length": steps,
                             "Current_max_arrival": max_arrived
                             })
-                    steps = 0
-                    batch_rewards = []
+                    steps[i] = 0
 
             # bootstrap value if not done
             with torch.no_grad():
@@ -320,6 +318,7 @@ class PPOAgent(nn.Module):
             # Log to wandb
             if self.args.track:
                 self.wandb.log({
+                    "Batch_mean_reward": np.mean(batch_rewards), # Mean comulative reward of the current batch
                     "learning_rate": self.optimizer.param_groups[0]["lr"],  # Current learning rate used by the optimizer
                     "value_loss": v_loss,  # Loss related to how well the agent predicts the value of states
                     "policy_loss": pg_loss,  # Loss related to how well the agent learns to choose actions
@@ -361,13 +360,16 @@ class PPOAgent(nn.Module):
                 end_time = time.time()
                 computing_time = end_time - start_time
                 print(f" -------------------- Update: {update} -------------------- ")
+                print(f"Batch mean reward: {np.mean(batch_rewards):.4f}")
                 print(f"Policy Loss: {pg_loss:.4f}")
                 print(f"Value Loss: {v_loss:.4f}")
                 print(f"Entropy: {entropy_loss:.4f}")
                 print(f"KL Divergence: {approx_kl:.4f}")
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
-                print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}\n")
-                print(f"Collisions with obstacles in:\nEnv 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
+                print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}")
+                for t in range(len(mean_terminations_oc)):
+                    print(f"Collisions with obstacles in:")
+                    print(f"Env {t}: {int(mean_terminations_oc[t])}")
                 print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
                 print(f"SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
                 print(f" ---------------------------------------------------- ")

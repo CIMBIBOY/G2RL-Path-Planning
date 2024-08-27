@@ -68,7 +68,7 @@ if __name__ == '__main__':
     if not args.eval and args.method == 'mppo':
         # Set up the parallel environments
         envs = gym.vector.SyncVectorEnv(
-            [make_custom_env(seed=args.seed, idx=i, height=48, width=48, amr_count=2, max_amr=25, time_dimension=args.time_dim, pygame_render=args.pygame) for i in range(args.num_envs)]
+            [make_custom_env(seed=args.seed, idx=i, height=48, width=48, amr_count=25, max_amr=25, time_dimension=args.time_dim, pygame_render=args.pygame) for i in range(args.num_envs)]
         )
         # Reset num_envs number environment
         state, info = envs.reset()

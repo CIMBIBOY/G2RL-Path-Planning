@@ -1,5 +1,7 @@
 import numpy as np
 import random
+from map_generator import map_to_value
+from global_mapper import find_path
 
 '''
 1.	Initialize dynamic objects on the map.
@@ -63,12 +65,18 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
 
     done = False
     trunc = False
+    blocked = False
     h_old, w_old = agent_old_coordinates[0], agent_old_coordinates[1]
     h_new, w_new = h_old + direction[0], w_old - direction[1]
 
     # debug to monitor the agent's movement
     # print(f"At time index: {time_idx}\nAgent position: ({agent_old_coordinates[0]}, {agent_old_coordinates[1]})")
     # print(f"New agent position: ({h_new}, {w_new})\n")
+
+    value_map = map_to_value(inst_arr.squeeze())
+    path, fov = find_path(value_map, list((h_old, w_old))), list(agent_path[-1][0], agent_path[-1][1])
+    if path == 'fail': blocked = True
+        
 
     # Check if the agent has reached its goal
     if (h_new, w_new) == (agent_goal[0], agent_goal[1]):
@@ -77,17 +85,18 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         done = True
         info['goal_reached'] = True
         # inst_arr[h_new, w_new] = [128, 0, 128]  # mark goal cell as purple
-        if time_idx < path_len * 2: # Sub optimal reach
-            arrived = True
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx*2)
-        elif time_idx < path_len * 1.5: # Close optimal reach
-            arrived = True
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx*1.5)
-        elif time_idx < path_len * 1.1: # Optimal reach with small e boundary
+        if time_idx < path_len * 1.1 + 1:  # Optimal reach with small boundary
             arrived = True
             agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx)
-        else: # Not optimal reach (small reward)
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx*5)
+        elif time_idx < path_len * 1.5 + 1:  # Close to optimal reach
+            arrived = True
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 1.5)
+        elif time_idx < path_len * 2 + 1:  # Sub-optimal reach
+            # arrived = True
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 2)
+        else:  # Not optimal reach (small reward)
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 4)
+
         terminations[0] += 1
 
     # Check for out of bounds or collisions with obstacles
@@ -189,6 +198,13 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
                 else: 
                     inst_arr[h_new_obs, w_new_obs] = [255, 165, 0]  # Move to new position
 
+    # If path is blocked after dynmaic obstacles update than reset
+    path, fov = find_path(value_map, list((h_new, w_new))), list(agent_path[-1][0], agent_path[-1][1])
+    if path == 'fail' and blocked:
+        print("Agent's path is blocked, resetting env!")
+        trunc = True
+        info['blocked'] = True
+
     # Update local observation and global map
     local_obs = inst_arr[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
     global_map[h_old, w_old] = 255
@@ -203,11 +219,11 @@ def rewards_dict(case, N = 0, time_idx = 1):
     Return reward value
     r1 indicates that the robot reaches the free point of non-global navigation
     r2 means the robot hit an obstacle
-    r3 indicates that the robot reaches the global navigation point
-    r4 agent reaches it's goal
-    r5 agent follows it's global guidance path
+    r3 indicates that the robot return to the global navigation path
+    r4 agent follows it's global guidance path
+    r5 agent reaches it's goal
     """
-    r1,r2,r3,r4,r5= -0.01, -0.1, 0.08, 0.1, N/(time_idx*2),
+    r1,r2,r3,r4,r5= -0.01, -0.1, 0.1, 0.15, N/time_idx,
     rewards = {
         '0': r1,
         '1': r1 + r2,

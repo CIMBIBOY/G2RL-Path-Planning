@@ -83,6 +83,7 @@ class WarehouseEnvironment:
             'no_global_guidance': False,
             'goal_reached': False,
             'collision': False,
+            'blocked': False,
             'steps': 0,
             # 'path': [],
             'reward': 0,
@@ -231,12 +232,12 @@ class WarehouseEnvironment:
             self.arrived += 1
 
         # Check if there's global guidance in the local FOV
-        if not self.has_global_guidance():
+        if not self.has_global_guidance() and done == False:
             trunc = True
             self.info['no_global_guidance'] = True
             self.terminations[1] += 1
 
-        if self.steps > self.max_step:
+        if self.steps > self.max_step and done == False:
             # print(f"Max steps reached with steps: {self.steps} for path length: {self.agent_path_len}, decay: {self.decay}")
             trunc = True
             self.info['R_max_step'] = True
@@ -330,6 +331,10 @@ class WarehouseEnvironment:
     
         if h < 0 or h >= self.height or w < 0 or w >= self.width:
             # print(f"Position ({h}, {w}) is out of bounds")
+            return False
+        
+        if (self.init_arr[h, w] == [0, 255, 0]).all():
+            # print(f"Position ({h}, {w}) contains a dynamic obstacle")
             return False
         
         if (self.init_arr[h, w] == [255, 165, 0]).all():

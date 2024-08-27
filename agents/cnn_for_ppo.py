@@ -58,7 +58,7 @@ class ConvBlock(nn.Module):
         return x
 
 class CNNLSTM(nn.Module):
-    def __init__(self, time_dim = 1):
+    def __init__(self, time_dim = 7):
         super(CNNLSTM, self).__init__()
         self.conv_blocks = nn.Sequential(
             ConvBlock(4, 32, time_dim),
@@ -76,6 +76,7 @@ class CNNLSTM(nn.Module):
                 nn.init.orthogonal_(param, 1.0)
         
         self.fc = layer_init(nn.Linear(512, 512))
+        self.relu = nn.ReLU()
         # self.dropout = nn.Dropout(0.2)
         self.actor = layer_init(nn.Linear(512, 5), std=0.01)
         self.critic = layer_init(nn.Linear(512, 1), std=1)
@@ -137,12 +138,12 @@ class CNNLSTM(nn.Module):
             print(f"New hidden shape: {new_hidden.shape}")
 
         # Pass through fully connected layer and dropout
-        final_hidden = self.fc(new_hidden)
-        final_hidden = torch.relu(final_hidden)
+        x = self.fc(new_hidden)
+        x_fin = self.relu(x)
         # final_hidden = self.dropout(final_hidden)
         if self.debug:
-            print(f"Final hidden shape: {final_hidden.shape}")
-        return final_hidden, lstm_state
+            print(f"Final output shape: {x_fin.shape}")
+        return x_fin, lstm_state
 
     def get_value(self, x, lstm_state, done):
         hidden, _ = self.get_states(x, lstm_state, done)
