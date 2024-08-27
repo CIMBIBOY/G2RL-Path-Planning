@@ -348,7 +348,9 @@ class PPOAgent(nn.Module):
                     print(f"Entropy: {entropy_loss:.4f}")
                     print(f"KL Divergence: {approx_kl:.4f}") 
                     print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}\n")
-                    print(f"Collisions with obstacles in:\nEnv 1: {int(mean_terminations_oc[0])}, Env 2: {int(mean_terminations_oc[1])}, Env 3: {int(mean_terminations_oc[2])}, Env 4: {int(mean_terminations_oc[3])}\n")
+                    for i in len(mean_terminations_oc):
+                        print(f"Collisions with obstacles in:")
+                        print(f"\t Env {i}: {int(mean_terminations_oc[i])}")
                     print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
                     print(f"SPS (Steps Per Second): {int(global_step / (time.time() - start_time))}")
                     print(f" ---------------------------------------------------- ")

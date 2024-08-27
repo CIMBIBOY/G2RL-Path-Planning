@@ -77,9 +77,17 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         done = True
         info['goal_reached'] = True
         # inst_arr[h_new, w_new] = [128, 0, 128]  # mark goal cell as purple
-        if time_idx < path_len * 2:
+        if time_idx < path_len * 2: # Sub optimal reach
+            arrived = True
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx*2)
+        elif time_idx < path_len * 1.5: # Close optimal reach
+            arrived = True
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx*1.5)
+        elif time_idx < path_len * 1.1: # Optimal reach with small e boundary
             arrived = True
             agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx)
+        else: # Not optimal reach (small reward)
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx*5)
         terminations[0] += 1
 
     # Check for out of bounds or collisions with obstacles
@@ -115,9 +123,10 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
             if global_map[h_new, w_new] != 255 and leave_idx >= 0:
                 # Find the index of the current position in the global path
                 return_index = agent_path.index(list((h_new, w_new)))
-                cells_skipped = return_index - leave_idx
+                cells_skipped = return_index - leave_idx 
 
-                agent_reward += rewards_dict('2', cells_skipped)
+                # Account for returning to the path to the next global cell is 0 cell's skipped (-1)
+                agent_reward += rewards_dict('2', cells_skipped - 1)
                 # print("Reward for retruning to global path")
                 leave_idx = -1
                 
@@ -132,10 +141,9 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
         dist = new_dist
 
     # Update agent position before moving obstacles
-    if not done:
         # Clear the previous agent position
-        inst_arr[h_old, w_old] = [255, 255, 255]
-        inst_arr[h_new, w_new] = [255, 0, 0]
+    inst_arr[h_old, w_old] = [255, 255, 255]
+    inst_arr[h_new, w_new] = [255, 0, 0]
 
     # At reset state objects don't move
     if time_idx != 1: 
