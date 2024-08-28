@@ -1,7 +1,7 @@
 import numpy as np
 import random
-from map_generator import map_to_value
-from global_mapper import find_path
+from environment.map_generator import map_to_value
+from environment.global_mapper import find_path
 
 '''
 1.	Initialize dynamic objects on the map.
@@ -41,7 +41,7 @@ def manhattan_distance(x_st, y_st, x_end, y_end):
     return abs(x_end - x_st) + abs(y_end - y_st)
 
 # Function to update the coordinates of the agent and dynamic obstacles
-def update_coords(coords, inst_arr, agent, time_idx, width, global_map, direction, agent_old_coordinates, leave_idx, dist, agent_goal, terminations, stayed_array, info, fast_obj_from, path_len):
+def update_coords(coords, inst_arr, agent, time_idx, local_fov, global_map, direction, agent_old_coordinates, leave_idx, dist, agent_goal, terminations, stayed_array, info, fast_obj_from, path_len):
     
     """ 
     Update coordinates
@@ -74,7 +74,7 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
     # print(f"New agent position: ({h_new}, {w_new})\n")
 
     value_map = map_to_value(inst_arr.squeeze())
-    path, fov = find_path(value_map, list((h_old, w_old))), list(agent_path[-1][0], agent_path[-1][1])
+    path, fov = find_path(value_map, list((h_old, w_old)), list((agent_path[-1][0], agent_path[-1][1])))
     if path == 'fail': blocked = True
         
 
@@ -199,16 +199,16 @@ def update_coords(coords, inst_arr, agent, time_idx, width, global_map, directio
                     inst_arr[h_new_obs, w_new_obs] = [255, 165, 0]  # Move to new position
 
     # If path is blocked after dynmaic obstacles update than reset
-    path, fov = find_path(value_map, list((h_new, w_new))), list(agent_path[-1][0], agent_path[-1][1])
+    path, fov = find_path(value_map, list((h_new, w_new)), list((agent_path[-1][0], agent_path[-1][1])))
     if path == 'fail' and blocked:
         print("Agent's path is blocked, resetting env!")
         trunc = True
         info['blocked'] = True
 
     # Update local observation and global map
-    local_obs = inst_arr[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
+    local_obs = inst_arr[max(0, h_new - local_fov):min(h - 1, h_new + local_fov), max(0, w_new - local_fov):min(w - 1, w_new + local_fov)]
     global_map[h_old, w_old] = 255
-    local_map = global_map[max(0, h_new - width):min(h - 1, h_new + width), max(0, w_new - width):min(w - 1, w_new + width)]
+    local_map = global_map[max(0, h_new - local_fov):min(h - 1, h_new + local_fov), max(0, w_new - local_fov):min(w - 1, w_new + local_fov)]
 
     return np.array(local_obs), np.array(local_map), global_map, done, trunc, info, agent_reward, leave_idx, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
 

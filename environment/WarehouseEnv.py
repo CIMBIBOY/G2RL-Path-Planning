@@ -381,8 +381,8 @@ class WarehouseEnvironment:
 
     def has_global_guidance(self):
         local_guidance = self.global_mapper_arr[
-            max(0, self.agent_prev_coord[0] - self.local_fov):min(self.width, self.agent_prev_coord[0] + self.local_fov + 1),
-            max(0, self.agent_prev_coord[1] - self.local_fov):min(self.width, self.agent_prev_coord[1] + self.local_fov + 1)
+            max(0, self.agent_prev_coord[0] - self.local_fov):min(self.width-1, self.agent_prev_coord[0] + self.local_fov),
+            max(0, self.agent_prev_coord[1] - self.local_fov):min(self.width-1, self.agent_prev_coord[1] + self.local_fov)
         ]
         
         # Check if there's any global guidance information (value less than 255) in the local observation
@@ -425,12 +425,26 @@ class WarehouseEnvironment:
             center_x = (x + 0.5) * new_width // self.init_arr.shape[1]
             center_y = (y + 0.5) * new_height // self.init_arr.shape[0]
             pygame.draw.circle(surf, (255, 0, 0), (center_x, center_y), 5)
-        
+
+        # Draw a purple square representing the local field of view around the agent
+        if hasattr(self, 'agent_prev_coord'):
+            # Calculate the top-left corner of the FOV square
+            top_left_x = max(0, self.agent_prev_coord[0] - self.local_fov) * new_width // self.init_arr.shape[1]
+            top_left_y = max(0, self.agent_prev_coord[1] - self.local_fov) * new_height // self.init_arr.shape[0]
+
+            # Calculate the bottom-right corner of the FOV square
+            bottom_right_x = min(self.init_arr.shape[1]-1, self.agent_prev_coord[0] + self.local_fov) * new_width // self.init_arr.shape[1]
+            bottom_right_y = min(self.init_arr.shape[0]-1, self.agent_prev_coord[1] + self.local_fov) * new_height // self.init_arr.shape[0]
+
+            # Draw the purple square
+            pygame.draw.rect(surf, (128, 0, 128), pygame.Rect(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y), 2)  # The last parameter is the thickness
+
         # Blit the scaled surface to the screen
         self.screen.blit(surf, (0, 0))
 
-        # Display the global guidance map as a semi-transparent overlay
+        # Display the global guidance map as a semi-transparent red overlay
         if hasattr(self, 'global_mapper_arr'):
+            # Convert the global map to a surface
             guidance_surf = pygame.surfarray.make_surface(self.global_mapper_arr)
             guidance_surf = pygame.transform.scale(guidance_surf, (new_width, new_height))
             guidance_surf.set_alpha(128)  # Set transparency level
