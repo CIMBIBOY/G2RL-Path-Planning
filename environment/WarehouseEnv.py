@@ -178,16 +178,16 @@ class WarehouseEnvironment:
         
         # initialization state
         reset_state = self.dynamic_coords[self.agent_idx]
-        
-        # calc maximum steps
-        if self.horizon != 'long':
-            self.max_step = calculate_max_steps(self.agent_path_len)
 
         # initial distance
         start = reset_state[0]
         end = reset_state[-1]
         self.dist = manhattan_distance(start[0], start[1], end[0], end[1])
         self.agent_path_len = self.dist
+
+        # calc maximum steps
+        if self.horizon != 'long':
+            self.max_step = self.agent_path_len * 2
 
         self.agent_path = self.agents_paths[self.agent_idx]
         self.agent_goal = self.agent_path[-1]  # Get the goal from the agent's path

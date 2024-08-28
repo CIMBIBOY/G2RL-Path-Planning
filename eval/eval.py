@@ -88,10 +88,10 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
     total_computing_time = 0
     failed_paths = 0
     total_reward = 0
+    state, info = env.reset()
+    next_obs = torch.Tensor(state).permute(1, 0, 2, 3, 4, 5).to(device)
 
     for episode in range(num_episodes):
-        state, info = env.reset()
-        next_obs = torch.Tensor(state).permute(1, 0, 2, 3, 4, 5).to(device)
         start_cell = env.envs[0].dynamic_coords[env.envs[0].agent_idx][0]
         end_cell = env.envs[0].dynamic_coords[env.envs[0].agent_idx][-1]
 
@@ -144,7 +144,6 @@ def evaluate_performance(env, args, num_episodes=100, agent = None, train_name =
             steps += 1
             episode_reward += reward
             
-
             '''
             if termination_flags:
                 print("\nInfo:")
