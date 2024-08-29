@@ -254,7 +254,6 @@ class PPOAgent(nn.Module):
                     print(" ---------------------------------------------------------------------------------------------------- ")
                     if self.args.track:
                         self.wandb.log({ 
-                            "Episode_step_length": steps,
                             "Current_max_arrival": max_arrived
                             })
                     steps[i] = 0

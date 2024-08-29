@@ -16,15 +16,15 @@ import gym
 import warnings
 
 '''
-python3 main.py --train_name CS47 --seed 515 --method mppo --train scratch --total_timesteps 10240000 --num_steps 256 --cmd_log 5 --num_envs 4 --time_dim 7 --learning_rate 2e-8
+python3 main.py --train_name CS47 --seed 515 --method mppo --train scratch --total_timesteps 10240000 --num_steps 256 --cmd_log 5 --num_envs 4 --time_dim 13 --learning_rate 2e-8 --pygame
 
-python3 main.py --train_name TS47noBD --cuda --seed 530 --method mppo --train scratch --total_timesteps 20480000 --num_steps 1024 --cmd_log 5 --learning_rate 3e-5 --num_envs 3 --time_dim 13 --track --target_kl 0.05
+python3 main.py --train_name TS_4_13_noBD --cuda --seed 530 --method mppo --train scratch --total_timesteps 20480000 --num_steps 512 --cmd_log 5 --learning_rate 3e-5 --num_envs 3 --num_minibatches 3 --update_epochs 3 --time_dim 13 --track --target_kl 0.05
 
-python3 main.py --train_name titanS --cuda --seed 437 --method mppo --train retrain --model_weights eval/weights/titan_mppo_432_1724522465.pth --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 1e-5 --num_envs 4 --track --clip_coef 0.1 --max_grad_norm 0.4
+python3 main.py --train_name titanS --cuda --seed 437 --method mppo --train retrain --model_weights eval/weights/TS47noBD_mppo_525_1724684017.pth --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 1e-5 --num_envs 4 --track --clip_coef 0.1 --max_grad_norm 0.4 --pygame
 
 python3 main.py --train_name Q7 --seed 37 --method dqn --train scratch --total_timesteps 100000 --num_steps 1000 --cmd_log 5 --batch 64 --explore 200000
 
-python3 main.py --train_name eval --seed 444 --method mppo --train retrain --model_weights eval/weights/TS47noBD_mppo_525_1724684017.pth --eval --eval_steps 100
+python3 main.py --train_name eval --seed 444 --method mppo --train retrain --model_weights eval/weights/TS47noBD_mppo_525_1724684017.pth --eval --eval_steps 100 --pygame
 
 '''
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     if not args.eval and args.method == 'mppo':
         # Set up the parallel environments
         envs = gym.vector.SyncVectorEnv(
-            [make_custom_env(seed=args.seed, idx=i, height=48, width=48, amr_count=25, max_amr=25, time_dimension=args.time_dim, pygame_render=args.pygame) for i in range(args.num_envs)]
+            [make_custom_env(seed=args.seed, idx=i, height=48, width=48, amr_count=2, max_amr=25, time_dimension=args.time_dim, pygame_render=args.pygame) for i in range(args.num_envs)]
         )
         # Reset num_envs number environment
         state, info = envs.reset()

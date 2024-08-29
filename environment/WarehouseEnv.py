@@ -117,7 +117,7 @@ class WarehouseEnvironment:
 
             self.seed(self.np_random.integers(0, 1000000))
             # Implementing curriculum learning
-            if self.arrived >= 25 and self.amr_count < self.max_amr: 
+            if self.arrived > 25 and self.amr_count < self.max_amr: 
                 self.amr_count += 1
                 print(f"Dynamic object added, current count: {self.amr_count}")
                 if self.amr_count == self.fast_obj_idx:
@@ -248,10 +248,15 @@ class WarehouseEnvironment:
         combined_arr = np.array([])
         if len(local_obs) > 0:
             self.scenes.append(Image.fromarray(local_obs, 'RGB'))
+            print(f"Local map shape: {local_map.shape}")
+            print(f"Local obs shape: {local_obs.shape}")
             local_map = local_map.reshape(local_map.shape[0],local_map.shape[1],1)
             combined_arr = np.dstack((local_obs, local_map))
+            print(f"Combined array shape: {combined_arr.shape}")
             combined_arr = symmetric_pad_array(combined_arr, target_array, 255)
+            print(f"Combined array after padding: {combined_arr.shape}")
             combined_arr = combined_arr.reshape(1,1,combined_arr.shape[0], combined_arr.shape[1], combined_arr.shape[2])
+            print(f"Combined array final shape: {combined_arr.shape}")
         
         if len(combined_arr) > 0:
             if len(self.observation_history) < self.Nt:
@@ -381,8 +386,8 @@ class WarehouseEnvironment:
 
     def has_global_guidance(self):
         local_guidance = self.global_mapper_arr[
-            max(0, self.agent_prev_coord[0] - self.local_fov):min(self.width-1, self.agent_prev_coord[0] + self.local_fov),
-            max(0, self.agent_prev_coord[1] - self.local_fov):min(self.width-1, self.agent_prev_coord[1] + self.local_fov)
+            max(0, self.agent_prev_coord[0] - self.local_fov):min(self.width, self.agent_prev_coord[0] + self.local_fov),
+            max(0, self.agent_prev_coord[1] - self.local_fov):min(self.width, self.agent_prev_coord[1] + self.local_fov)
         ]
         
         # Check if there's any global guidance information (value less than 255) in the local observation
@@ -433,8 +438,8 @@ class WarehouseEnvironment:
             top_left_y = max(0, self.agent_prev_coord[1] - self.local_fov) * new_height // self.init_arr.shape[0]
 
             # Calculate the bottom-right corner of the FOV square
-            bottom_right_x = min(self.init_arr.shape[1]-1, self.agent_prev_coord[0] + self.local_fov) * new_width // self.init_arr.shape[1]
-            bottom_right_y = min(self.init_arr.shape[0]-1, self.agent_prev_coord[1] + self.local_fov) * new_height // self.init_arr.shape[0]
+            bottom_right_x = min(self.init_arr.shape[1], self.agent_prev_coord[0] + self.local_fov) * new_width // self.init_arr.shape[1]
+            bottom_right_y = min(self.init_arr.shape[0], self.agent_prev_coord[1] + self.local_fov) * new_height // self.init_arr.shape[0]
 
             # Draw the purple square
             pygame.draw.rect(surf, (128, 0, 128), pygame.Rect(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y), 2)  # The last parameter is the thickness

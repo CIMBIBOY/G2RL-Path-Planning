@@ -90,12 +90,12 @@ def update_coords(coords, inst_arr, agent, time_idx, local_fov, global_map, dire
             agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx)
         elif time_idx < path_len * 1.5 + 1:  # Close to optimal reach
             arrived = True
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 1.5)
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 2)
         elif time_idx < path_len * 2 + 1:  # Sub-optimal reach
             # arrived = True
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 2)
-        else:  # Not optimal reach (small reward)
             agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 4)
+        else:  # Not optimal reach (small reward)
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 10)
 
         terminations[0] += 1
 
@@ -206,9 +206,9 @@ def update_coords(coords, inst_arr, agent, time_idx, local_fov, global_map, dire
         info['blocked'] = True
 
     # Update local observation and global map
-    local_obs = inst_arr[max(0, h_new - local_fov):min(h - 1, h_new + local_fov), max(0, w_new - local_fov):min(w - 1, w_new + local_fov)]
+    local_obs = inst_arr[max(0, h_new - local_fov):min(h, h_new + local_fov), max(0, w_new - local_fov):min(w, w_new + local_fov)]
     global_map[h_old, w_old] = 255
-    local_map = global_map[max(0, h_new - local_fov):min(h - 1, h_new + local_fov), max(0, w_new - local_fov):min(w - 1, w_new + local_fov)]
+    local_map = global_map[max(0, h_new - local_fov):min(h, h_new + local_fov), max(0, w_new - local_fov):min(w, w_new + local_fov)]
 
     return np.array(local_obs), np.array(local_map), global_map, done, trunc, info, agent_reward, leave_idx, inst_arr, [h_new, w_new], dist, arrived, terminations, stayed_array
 
