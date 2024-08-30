@@ -40,9 +40,9 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, time_dimension = 7, dropout_rate=0.2):
         super(ConvBlock, self).__init__()
-        self.conv1 = layer_init(nn.Conv3d(in_channels, out_channels, kernel_size=(int(time_dimension/4), 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)))
+        self.conv1 = layer_init(nn.Conv3d(in_channels, out_channels, kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(0, 1, 1)))
         # self.bn1 = nn.BatchNorm3d(out_channels)
-        self.conv2 = layer_init(nn.Conv3d(out_channels, out_channels, kernel_size=(int(time_dimension/4), 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
+        self.conv2 = layer_init(nn.Conv3d(out_channels, out_channels, kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)))
         # self.bn2 = nn.BatchNorm3d(out_channels)
         # self.dropout = nn.Dropout3d(dropout_rate)
 
