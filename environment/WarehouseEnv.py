@@ -113,11 +113,11 @@ class WarehouseEnvironment:
         self.info['steps'] = 0
         
         # Generate new coordinates and paths every 50 episodes
-        if self.episode_count == 0 or self.episode_count % 50 == 1:
+        if self.episode_count == 0 or self.episode_count % 100 == 1:
 
             self.seed(self.np_random.integers(0, 1000000))
             # Implementing curriculum learning
-            if self.arrived > 25 and self.amr_count < self.max_amr: 
+            if self.arrived >= 80 and self.amr_count < self.max_amr: 
                 self.amr_count += 1
                 print(f"Dynamic object added, current count: {self.amr_count}")
                 if self.amr_count == self.fast_obj_idx:
