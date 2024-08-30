@@ -18,7 +18,7 @@ import warnings
 '''
 python3 main.py --train_name CS47 --seed 515 --method mppo --train scratch --total_timesteps 10240000 --num_steps 256 --cmd_log 5 --num_envs 4 --time_dim 13 --learning_rate 2e-8 --pygame
 
-python3 main.py --train_name TS_4_13_noBD --cuda --seed 530 --method mppo --train scratch --total_timesteps 20480000 --num_steps 512 --cmd_log 5 --learning_rate 3e-5 --num_envs 3 --num_minibatches 3 --update_epochs 3 --time_dim 13 --track --target_kl 0.05
+python3 main.py --train_name TS_4_7_noBD --cuda --seed 535 --method mppo --train scratch --total_timesteps 30720000 --num_steps 1024 --cmd_log 5 --learning_rate 3e-5 --num_envs 3 --num_minibatches 3 --update_epochs 3 --time_dim 7 --track --target_kl 0.05
 
 python3 main.py --train_name titanS --cuda --seed 437 --method mppo --train retrain --model_weights eval/weights/TS47noBD_mppo_525_1724684017.pth --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 1e-5 --num_envs 4 --track --clip_coef 0.1 --max_grad_norm 0.4 --pygame
 
