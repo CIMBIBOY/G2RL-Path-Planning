@@ -346,7 +346,7 @@ class PPOAgent(nn.Module):
                     print(f"Entropy: {entropy_loss:.4f}")
                     print(f"KL Divergence: {approx_kl:.4f}") 
                     print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}\n")
-                    for i in len(mean_terminations_oc):
+                    for i in range(self.args.num_envs):
                         print(f"Collisions with obstacles in:")
                         print(f"\t Env {i}: {int(mean_terminations_oc[i])}")
                     print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
@@ -366,7 +366,7 @@ class PPOAgent(nn.Module):
                 print(f"KL Divergence: {approx_kl:.4f}")
                 print(f"Computing time: {computing_time:.4f} s/{self.args.cmd_log} updates")
                 print(f"Terminations casued by:\nReached goals: {int(mean_terminations_rg)}, No guidance information: {int(mean_terminations_gi)}, Max steps reached: {int(mean_terminations_ms)}")
-                for t in range(len(mean_terminations_oc)):
+                for t in range(self.args.num_envs):
                     print(f"Collisions with obstacles in:")
                     print(f"Env {t}: {int(mean_terminations_oc[t])}")
                 print(f"Current number of dynamic objects: {curr_amr_count} in env: {curr_index} (increasing based on curriculum learning)")
