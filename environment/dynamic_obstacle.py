@@ -225,7 +225,7 @@ def rewards_dict(case, N = 0, time_idx = 1):
     r4 agent follows it's global guidance path
     r5 agent reaches it's goal
     """
-    r1, r2, r3, r4, r5, r6, r7 = -0.02, -0.2, 0.1, 0.2, N/time_idx, -0.075
+    r1, r2, r3, r4, r5, r6, r7 = -0.02, -0.2, 0.1, 0.2, N/time_idx, -0.075, 0
     rewards = {
         '0': r1,
         '1': r1 + r2,
