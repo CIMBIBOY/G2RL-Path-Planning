@@ -87,15 +87,15 @@ def update_coords(coords, inst_arr, agent, time_idx, local_fov, global_map, dire
         # inst_arr[h_new, w_new] = [128, 0, 128]  # mark goal cell as purple
         if time_idx < path_len * 1.1 + 1:  # Optimal reach with small boundary
             arrived = True
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx)
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 2)
         elif time_idx < path_len * 1.5 + 1:  # Close to optimal reach
             arrived = True
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 2)
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 3)
         elif time_idx < path_len * 2 + 1:  # Sub-optimal reach
             # arrived = True
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 4)
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 6)
         else:  # Not optimal reach (small reward)
-            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 10)
+            agent_reward += rewards_dict('4', manhattan_distance(agent_path[0][0], agent_path[0][1], agent_path[-1][0], agent_path[-1][1]), time_idx * 12)
 
         terminations[0] += 1
 
@@ -124,6 +124,8 @@ def update_coords(coords, inst_arr, agent, time_idx, local_fov, global_map, dire
                 # Find the index of the leave posiiton in the global path
                 if global_map[h_old, w_old] != 255 or leave_idx == -1:
                     leave_idx = agent_path.index([h_old, w_old])
+                    # Punish the agent upon leaving the global path
+                    agent_reward += rewards_dict('5')
 
             if global_map[h_new, w_new] != 255 and leave_idx == -1:
                 agent_reward += rewards_dict('3')
@@ -223,13 +225,15 @@ def rewards_dict(case, N = 0, time_idx = 1):
     r4 agent follows it's global guidance path
     r5 agent reaches it's goal
     """
-    r1,r2,r3,r4,r5= -0.01, -0.1, 0.75, 0.1, N/time_idx,
+    r1, r2, r3, r4, r5, r6, r7 = -0.02, -0.2, 0.1, 0.2, N/time_idx, -0.075
     rewards = {
         '0': r1,
         '1': r1 + r2,
         '2': r1 + N * r3,
         '3': r4,
-        '4': r5
+        '4': r5,
+        '5': r6,
+        '6': r7
     }
 
     return rewards[case]

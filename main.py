@@ -13,18 +13,17 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 from eval.eval import evaluate_performance
 import gym
-import warnings
 
 '''
 python3 main.py --train_name CS47 --seed 515 --method mppo --train scratch --total_timesteps 10240000 --num_steps 256 --cmd_log 5 --num_envs 4 --time_dim 13 --learning_rate 2e-8 --pygame
 
-python3 main.py --train_name TS_4_7_noBD --cuda --seed 540 --method mppo --train scratch --total_timesteps 30720000 --num_steps 1024 --cmd_log 5 --learning_rate 3e-5 --num_envs 4 --num_minibatches 4 --update_epochs 4 --time_dim 7 --track 
+python3 main.py --train_name TS_4_7_noBD --cuda --seed 540 --method mppo --train scratch --total_timesteps 30720000 --num_steps 512 --cmd_log 5 --learning_rate 3e-5 --num_envs 4 --num_minibatches 4 --update_epochs 4 --time_dim 7 --track 
 
 python3 main.py --train_name titanS --cuda --seed 437 --method mppo --train retrain --model_weights eval/weights/TS47noBD_mppo_525_1724684017.pth --total_timesteps 10240000 --num_steps 1024 --cmd_log 5 --learning_rate 1e-5 --num_envs 4 --track --clip_coef 0.1 --max_grad_norm 0.4 --pygame
 
 python3 main.py --train_name Q7 --seed 37 --method dqn --train scratch --total_timesteps 100000 --num_steps 1000 --cmd_log 5 --batch 64 --explore 200000
 
-python3 main.py --train_name eval --seed 444 --method mppo --train retrain --model_weights eval/weights/TS47noBD_mppo_525_1724684017.pth --eval --eval_steps 100 --pygame
+python3 main.py --train_name eval --seed 900 --method mppo --train retrain --model_weights eval/weights/TS_4_7_noBD_mppo_540_1725258796.pth --eval --eval_steps 100 --pygame
 
 '''
 
@@ -78,7 +77,7 @@ if __name__ == '__main__':
         # Setting long horizon for ppo
         for i in range(args.num_envs):
             envs.envs[i].horizon = 'long'
-            envs.envs[i].max_step = 2048
+            envs.envs[i].max_step = 4096
 
         # Render the first env instance
         if args.pygame:
